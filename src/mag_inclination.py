@@ -2,6 +2,8 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import netCDF4 as nc
+import pandas as pd
 import os
 from cdasws import CdasWs
 from cdasws.datarepresentation import DataRepresentation
@@ -264,6 +266,17 @@ def year_fraction( dt ):
 
     return year_frac
 
+def goes_epoch_to_datetime(timestamp):
+    """
+    Converts goes epoch time from .cda into pandas datetime timestamp
+
+    :param timestamp: from .cda file
+    :return: pandas datetime timestamp
+    """
+    epoch = pd.to_datetime('2000-01-01 12:00:00')
+    time_datetime = epoch + pd.to_timedelta(timestamp, unit='s')
+    return time_datetime
+
 def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data, date_str):
     # Calculate θ for GOES and GK2A data
     goes_theta = calculate_magnetic_inclination_angle_VDH(goes_data[:, 0], goes_data[:, 1], goes_data[:, 2])
@@ -290,6 +303,16 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data, date_st
     plt.tight_layout()
     plt.show()
 
+def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+
+    ax1.set_title(f'{whatspacecraft} B_GSE')
+    ax1.plot(spacecraftdata[:,0], label='X')
+    ax2.plot(spacecraftdata[:,1], label='Y')
+    ax3.plot(spacecraftdata[:,2], label='Z')
+    plt.tight_layout()
+    ax1.legend()
+    plt.show()
 
 if __name__ == "__main__":
     # Pickle file paths:
@@ -301,6 +324,12 @@ if __name__ == "__main__":
     gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
     # print(goes_data.dtype)
 
+    goes_dataset = nc.Dataset('Z:/Data/GOES18/2022/dn_magn-l2-avg1m_g18_d20221217_v2-0-2.nc')
+    goes_time_fromnc = goes_epoch_to_datetime(goes_dataset['time'][:])
+
+    goes_bgse_stacked = stack_from_data(goes_dataset['b_gse'])
+    plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
+
     # Load the time data
     goes_time = load_pickle_file(goes_pickle_path)['time_min']
     # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
@@ -308,7 +337,7 @@ if __name__ == "__main__":
     # For plot title, mainly
     date_str = '2022-12-17'
 
-    goes_VDH = gse_to_vdh(goes_data, goes_time)
+    goes_VDH = gse_to_vdh(goes_bgse_stacked, goes_time)
     # print(goes_VDH)
     gk2a_VDH = gse_to_vdh(gk2a_data, goes_time)
     # print(gk2a_VDH)
