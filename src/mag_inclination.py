@@ -2,9 +2,12 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import netCDF4 as nc
+import pandas as pd
 import os
 from cdasws import CdasWs
 from cdasws.datarepresentation import DataRepresentation
+
 cdas = CdasWs()
 if not "CDF_LIB" in os.environ:
     base_dir = "C:/Scripts/cdf3.9.0"
@@ -21,11 +24,14 @@ def load_pickle_file(file_path):
         data = pickle.load(file)
     return data
 
+
 def calculate_magnetic_inclination_angle_GSE(bx, by, bz):
-    return np.arctan2(bx, np.sqrt(by**2 + bz**2))
+    return np.arctan2(bx, np.sqrt(by ** 2 + bz ** 2))
+
 
 def calculate_magnetic_inclination_angle_VDH(bV, bD, bH):
-    return np.arctan2(bH, np.sqrt(bV**2 + bD**2))
+    return np.arctan2(bH, np.sqrt(bV ** 2 + bD ** 2))
+
 
 def gse_to_vdh(gse_data, time):
     # Convert GSE to GEO
@@ -39,12 +45,16 @@ def gse_to_vdh(gse_data, time):
 
     return vdh_coords
 
+
 def stack_from_data(sc_data):
-    bx, by, bz = sc_data[:,0], sc_data[:,1], sc_data[:,2]
+    bx, by, bz = sc_data[:, 0], sc_data[:, 1], sc_data[:, 2]
     b_gse_stacked = np.column_stack((bx, by, bz))
     return b_gse_stacked
 
+
 def gse_to_geo(b_gse_stacked, time):
+    time = time.to_pydatetime()
+
     # Need to create ticks from spacepy.time for unit conversion:
     tickz = spt.Ticktock(time, 'UTC')
 
@@ -54,12 +64,15 @@ def gse_to_geo(b_gse_stacked, time):
     # Perform the transformation to geo
     geo_coords = b_gse_coords.convert('GEO', 'car')
 
-    geo_coords_sph = b_gse_coords.convert('GEO', 'sph')  # Convert to spherical coordinates
+    geo_coords_sph = b_gse_coords.convert('GEO',
+                                          'sph')  # Convert to spherical
+    # coordinates
 
     # Extract GEO lat long
     geo_latitude, geo_longitude = geo_coords_sph.lati, geo_coords_sph.long
 
     return geo_coords, geo_latitude, geo_longitude
+
 
 def geo_to_rhenp(geo_long, geo_coords, backward=False):
     n_points = len(geo_long)
@@ -71,7 +84,8 @@ def geo_to_rhenp(geo_long, geo_coords, backward=False):
         if backward:
             mat = np.transpose(mat)
 
-        geo_cart_coords = geo_coords.data[i, :]  # Extract coordinates for a single time point
+        geo_cart_coords = geo_coords.data[i,
+                          :]  # Extract coordinates for a single time point
         result[i, :] = np.dot(geo_cart_coords, mat)
 
     return result
@@ -81,9 +95,12 @@ def hapgood_matrix(theta, axis):
     """ Implementation of ATBD for GOES-R MAG Alternate Coordinate Systems.
 
         Hertitage:
-            Adapted from Loto'aniu C++ implementation (grtransform.cpp::Grtransform::hapgood_matrix(...)).
+            Adapted from Loto'aniu C++ implementation (
+            grtransform.cpp::Grtransform::hapgood_matrix(...)).
 
-            Original source: https://github.com/CIRES-STP/goesr_l2_mag_algs/blob/7d5155f3b98cd8e9503c877b423e54f36ede8c25/multi_alg_dependencies/src/python/common/goesr/goes_coordinates.py
+            Original source: https://github.com/CIRES-STP/goesr_l2_mag_algs
+            /blob/7d5155f3b98cd8e9503c877b423e54f36ede8c25
+            /multi_alg_dependencies/src/python/common/goesr/goes_coordinates.py
 
         :param theta: degrees to rotate
         :param axis: axis to rotate: 0, 1 or 2
@@ -115,6 +132,7 @@ def hapgood_matrix(theta, axis):
     # Return rotation matrix
     return mat
 
+
 def rhenp_to_vdh(dt, geo_lat, geo_lon, rhenp, mats=None):
     """ The magnetic VDH coordinate definition and transformation algorithm
         follows that given by McPherron (1973) for the ATS-1.
@@ -125,14 +143,18 @@ def rhenp_to_vdh(dt, geo_lat, geo_lon, rhenp, mats=None):
 
         Heritage:
             Implementation of ATBD for GOES-R MAG Alternate Coordinate Systems.
-            Adapted from Loto'aniu C++ implementation (Grtransform::mat_T_rhenp_vdh(...)).
+            Adapted from Loto'aniu C++ implementation (
+            Grtransform::mat_T_rhenp_vdh(...)).
 
     :param dt:      Scalar or Numpy array of date-times.
     :param geo_lat: Geocentric latitude. [Scalar or Numpy array of floats.]
-    :param geo_lon: Geocentric longitude for determining Hapgood matrix. [Scalar or Numpy array of floats.]
+    :param geo_lon: Geocentric longitude for determining Hapgood matrix. [
+    Scalar or Numpy array of floats.]
     :param rhenp:   Right-handed ENP (intermediate coordinate system).
-    :param mats:    Rotation (Hapgood) matrices (optional, default None, meaning they will be computed)
-    :return:        Numpy array of VDH cartesian coordinates with dimension Nx3 (input units).
+    :param mats:    Rotation (Hapgood) matrices (optional, default None,
+    meaning they will be computed)
+    :return:        Numpy array of VDH cartesian coordinates with dimension
+    Nx3 (input units).
     """
 
     # Pre-conditions
@@ -152,12 +174,15 @@ def rhenp_to_vdh(dt, geo_lat, geo_lon, rhenp, mats=None):
 
     return output
 
+
 def rhenp_to_vdh_mats(dt, geo_lat, geo_lon):
-    """ Calculate the rotation (Hapgood) matrices for RHENP to VDH coordinate transform.
+    """ Calculate the rotation (Hapgood) matrices for RHENP to VDH
+    coordinate transform.
 
     :param dt:      Scalar or Numpy array of date-times.
     :param geo_lat: Geocentric latitude. [Scalar or Numpy array of floats.]
-    :param geo_lon: Geocentric longitude for determining Hapgood matrix. [Scalar or Numpy array of floats.]
+    :param geo_lon: Geocentric longitude for determining Hapgood matrix. [
+    Scalar or Numpy array of floats.]
     :return: 3D Numpy array of shape Nx3x3 representing each rotation matrix
     """
 
@@ -180,7 +205,9 @@ def rhenp_to_vdh_mats(dt, geo_lat, geo_lon):
 
         H = np.dot(mat_tmp, u)
 
-        Q = np.sqrt((H[1] * Rg[2] - Rg[1] * H[2])**2 + (H[2] * Rg[0] - Rg[2] * H[0])**2 + (H[0] * Rg[1] - Rg[0] * H[1])**2)
+        Q = np.sqrt((H[1] * Rg[2] - Rg[1] * H[2]) ** 2 + (
+                    H[2] * Rg[0] - Rg[2] * H[0]) ** 2 + (
+                                H[0] * Rg[1] - Rg[0] * H[1]) ** 2)
 
         tmp_vec1 = np.cross(H, Rg)
 
@@ -196,9 +223,11 @@ def rhenp_to_vdh_mats(dt, geo_lat, geo_lon):
 
     return mats
 
+
 def dipole_12_mag_lat_lon(dt):
     """
-    Calculates the IGRF12 Dipole latitude and longitude in Geocentric coordinates for a scalar.
+    Calculates the IGRF12 Dipole latitude and longitude in Geocentric
+    coordinates for a scalar.
 
     Heritage:
         Adapted from Loto'aniu dipole.cpp.
@@ -209,13 +238,28 @@ def dipole_12_mag_lat_lon(dt):
 
     assert len(np.shape([dt])) == 1, "Expected a scalar time value"
 
-    ''' IGRF Constants: from https://www.ngdc.noaa.gov/IAGA/vmod/igrf12coeffs.txt'''
-    dip_epochs = np.array([1900, 1905, 1910, 1915, 1920, 1925, 1930, 1935, 1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020])
-    g01 = np.array([-31543, -31464, -31354, -31212, -31060, -30926, -30805, -30715, -30654, -30594, -30554, -30500, -30421, -30334, -30220, -30100, -29992, -29873, -29775, -29692, -29619.4, -29554.63,-29496.57, -29441.46, -29404.8])
-    g11 = np.array([-2298, -2298, -2297, -2306, -2317, -2318, -2316, -2306, -2292, -2285, -2250, -2215, -2169, -2119, -2068, -2013, -1956, -1905, -1848, -1784, -1728.2, -1669.05, -1586.42, -1501.77, -1450.9])
-    h11 = np.array([5922, 5909, 5898, 5875, 5845, 5817, 5808, 5812, 5821, 5810, 5815, 5820, 5791, 5776, 5737, 5675, 5604, 5500, 5406, 5306, 5186.1, 5077.99, 4944.26, 4795.99, 4652.5])
+    ''' IGRF Constants: from 
+    https://www.ngdc.noaa.gov/IAGA/vmod/igrf12coeffs.txt'''
+    dip_epochs = np.array(
+        [1900, 1905, 1910, 1915, 1920, 1925, 1930, 1935, 1940, 1945, 1950,
+         1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005,
+         2010, 2015, 2020])
+    g01 = np.array(
+        [-31543, -31464, -31354, -31212, -31060, -30926, -30805, -30715,
+         -30654, -30594, -30554, -30500, -30421, -30334, -30220, -30100,
+         -29992, -29873, -29775, -29692, -29619.4, -29554.63, -29496.57,
+         -29441.46, -29404.8])
+    g11 = np.array(
+        [-2298, -2298, -2297, -2306, -2317, -2318, -2316, -2306, -2292, -2285,
+         -2250, -2215, -2169, -2119, -2068, -2013, -1956, -1905, -1848, -1784,
+         -1728.2, -1669.05, -1586.42, -1501.77, -1450.9])
+    h11 = np.array(
+        [5922, 5909, 5898, 5875, 5845, 5817, 5808, 5812, 5821, 5810, 5815,
+         5820, 5791, 5776, 5737, 5675, 5604, 5500, 5406, 5306, 5186.1, 5077.99,
+         4944.26, 4795.99, 4652.5])
 
-    assert len(dip_epochs) == len(g01) == len(g11) == len(h11), "Coefficient arrays must all have same length"
+    assert len(dip_epochs) == len(g01) == len(g11) == len(
+        h11), "Coefficient arrays must all have same length"
 
     ''' Interpolate IGRF coefficients linearly '''
     # Nearest IGRF epoch <= Date
@@ -245,7 +289,8 @@ def dipole_12_mag_lat_lon(dt):
 
     return [dip_lat, dip_lon]
 
-def year_fraction( dt ):
+
+def year_fraction(dt):
     '''
     Converts Datetime to Year fraction [0,1).
 
@@ -254,20 +299,43 @@ def year_fraction( dt ):
     '''
     import calendar
 
-    days_in_year = 366. if calendar.isleap( dt.year ) else 365.
+    days_in_year = 366. if calendar.isleap(dt.year) else 365.
 
-    # This DOY is a fractional day of year within [0,365) or [0,366) (non inclusive).
-    day_of_year = (-1. + int(dt.strftime('%j'))) + dt.hour/24. + dt.minute/1440. \
-        + (dt.second + 1e-6*dt.microsecond)/86400.
+    # This DOY is a fractional day of year within [0,365) or [0,366) (non
+    # inclusive).
+    day_of_year = (-1. + int(
+        dt.strftime('%j'))) + dt.hour / 24. + dt.minute / 1440. \
+                  + (dt.second + 1e-6 * dt.microsecond) / 86400.
 
     year_frac = day_of_year / days_in_year  # Between 0 and 1
 
     return year_frac
 
-def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data, date_str):
+def fix_nan_for_goes(data, nanvalue=-9998.0):
+    data[data < nanvalue] = np.nan
+    return data
+
+def goes_epoch_to_datetime(timestamp):
+    """
+    Converts goes epoch time from .cda into pandas datetime timestamp
+
+    :param timestamp: from .cda file
+    :return: pandas datetime timestamp
+    """
+    epoch = pd.to_datetime('2000-01-01 12:00:00')
+    time_datetime = epoch + pd.to_timedelta(timestamp, unit='s')
+    return time_datetime
+
+
+def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data,
+                                        date_str):
     # Calculate θ for GOES and GK2A data
-    goes_theta = calculate_magnetic_inclination_angle_VDH(goes_data[:, 0], goes_data[:, 1], goes_data[:, 2])
-    gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0], gk2a_data[:, 1], gk2a_data[:, 2])
+    goes_theta = calculate_magnetic_inclination_angle_VDH(goes_data[:, 0],
+                                                          goes_data[:, 1],
+                                                          goes_data[:, 2])
+    gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
+                                                          gk2a_data[:, 1],
+                                                          gk2a_data[:, 2])
 
     # Create plots for θ over time
     fig, (ax1) = plt.subplots()
@@ -291,27 +359,59 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data, date_st
     plt.show()
 
 
+def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+
+    ax1.set_title(f'{whatspacecraft} B_GSE')
+    ax1.plot(spacecraftdata[:, 0], label='X')
+    ax2.plot(spacecraftdata[:, 1], label='Y')
+    ax3.plot(spacecraftdata[:, 2], label='Z')
+    plt.tight_layout()
+    ax1.legend()
+    plt.show()
+
+
 if __name__ == "__main__":
     # Pickle file paths:
-    goes_pickle_path = 'Z:/Data/GOES18/model_outs/20221217/modout_20221217.pickle'
-    gk2a_pickle_path = 'Z:/Data/GK2A/model_outputs/20221217/sosmag_modout_2022-12-17.pickle'
+    # goes_pickle_path = 'Z:/Data/GOES18/model_outs/20221217/modout_20221217' \
+    #                    '.pickle'
+    # gk2a_pickle_path = 'Z:/Data/GK2A/model_outputs/20221217' \
+    #                    '/sosmag_modout_2022-12-17.pickle'
 
     # Load GOES and GK2A mag data
-    goes_data = load_pickle_file(goes_pickle_path)['sat']
-    gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
+    # goes_data = load_pickle_file(goes_pickle_path)['sat']
+    # gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
     # print(goes_data.dtype)
 
+    goes_dataset = nc.Dataset(
+        'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
+    gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+
+    goes_time_fromnc = goes_epoch_to_datetime(goes_dataset['time'][:])
+
+    gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
+                                         gk2a_dataset['b_ygse'][:],
+                                         gk2a_dataset['b_zgse'][:]))
+
+    goes_bgse_stacked = stack_from_data(goes_dataset['b_gse'])
+    goes_bgse_stacked = fix_nan_for_goes(goes_bgse_stacked)
+
+    # plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
+
     # Load the time data
-    goes_time = load_pickle_file(goes_pickle_path)['time_min']
+    # goes_time = load_pickle_file(goes_pickle_path)['time_min']
     # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
 
     # For plot title, mainly
-    date_str = '2022-12-17'
+    date_str = '2022-08-15'
 
-    goes_VDH = gse_to_vdh(goes_data, goes_time)
+    plot_BGSE_fromdata(goes_bgse_stacked, 'goes')
+    plot_BGSE_fromdata(gk2a_bgse_stacked, 'gk2a')
+
+    goes_VDH = gse_to_vdh(goes_bgse_stacked, goes_time_fromnc)
     # print(goes_VDH)
-    gk2a_VDH = gse_to_vdh(gk2a_data, goes_time)
+    gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
     # print(gk2a_VDH)
 
-    plot_magnetic_inclination_over_time(goes_time, goes_VDH, gk2a_VDH, date_str)
-
+    plot_magnetic_inclination_over_time(goes_time_fromnc, goes_VDH, gk2a_VDH,
+                                        date_str)
