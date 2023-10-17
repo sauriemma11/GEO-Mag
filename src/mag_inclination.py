@@ -206,8 +206,8 @@ def rhenp_to_vdh_mats(dt, geo_lat, geo_lon):
         H = np.dot(mat_tmp, u)
 
         Q = np.sqrt((H[1] * Rg[2] - Rg[1] * H[2]) ** 2 + (
-                    H[2] * Rg[0] - Rg[2] * H[0]) ** 2 + (
-                                H[0] * Rg[1] - Rg[0] * H[1]) ** 2)
+                H[2] * Rg[0] - Rg[2] * H[0]) ** 2 + (
+                            H[0] * Rg[1] - Rg[0] * H[1]) ** 2)
 
         tmp_vec1 = np.cross(H, Rg)
 
@@ -311,9 +311,11 @@ def year_fraction(dt):
 
     return year_frac
 
+
 def fix_nan_for_goes(data, nanvalue=-9998.0):
     data[data < nanvalue] = np.nan
     return data
+
 
 def goes_epoch_to_datetime(timestamp):
     """
@@ -358,6 +360,42 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data,
     plt.tight_layout()
     plt.show()
 
+def plot_magnetic_inclination_over_time_3sc(goes_time, goes17_data, goes18_data, gk2a_data,
+                                        date_str):
+    # Calculate θ for GOES and GK2A data
+    goes17_theta = calculate_magnetic_inclination_angle_VDH(goes17_data[:, 0],
+                                                          goes17_data[:, 1],
+                                                          goes17_data[:, 2])
+    goes18_theta = calculate_magnetic_inclination_angle_VDH(goes18_data[:, 0],
+                                                          goes18_data[:, 1],
+                                                          goes18_data[:, 2])
+    gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
+                                                          gk2a_data[:, 1],
+                                                          gk2a_data[:, 2])
+
+    # Create plots for θ over time
+    fig, (ax1) = plt.subplots()
+
+    # GOES17, red
+    # GOES18, orange
+    # SOSMAG, blue
+
+    ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red')
+    ax1.plot(goes_time, np.degrees(goes18_theta), label='G18', color='orange')
+    ax1.plot(goes_time, np.degrees(gk2a_theta), label='SOSMAG', color='blue')
+
+    ax1.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
+    ax1.set_ylabel('θ [degrees]')
+    ax1.set_ylim(0, 90)
+
+    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+
+    ax1.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 
 def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
@@ -370,48 +408,116 @@ def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
     ax1.legend()
     plt.show()
 
+def plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1, whatspacecraft2, whatspacecraft3=None, spacecraftdata3=None):
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
 
-if __name__ == "__main__":
-    # Pickle file paths:
-    # goes_pickle_path = 'Z:/Data/GOES18/model_outs/20221217/modout_20221217' \
-    #                    '.pickle'
-    # gk2a_pickle_path = 'Z:/Data/GK2A/model_outputs/20221217' \
-    #                    '/sosmag_modout_2022-12-17.pickle'
+    # ax1.set_title(f'{whatspacecraft} B_GSE')
+    ax1.plot(spacecraftdata1[:, 0], label=f'{whatspacecraft1} X', color='red')
+    ax1.plot(spacecraftdata2[:, 0], label=f'{whatspacecraft2} X', color='orange')
 
-    # Load GOES and GK2A mag data
-    # goes_data = load_pickle_file(goes_pickle_path)['sat']
-    # gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
-    # print(goes_data.dtype)
+    ax2.plot(spacecraftdata1[:, 1], label=f'{whatspacecraft1} Y', color='red')
+    ax2.plot(spacecraftdata2[:, 1], label=f'{whatspacecraft2} Y', color='orange')
 
-    goes_dataset = nc.Dataset(
-        'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
-    gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+    ax3.plot(spacecraftdata1[:, 2], label=f'{whatspacecraft1} Z', color='red')
+    ax3.plot(spacecraftdata2[:, 2], label=f'{whatspacecraft2} Z', color='orange')
 
-    goes_time_fromnc = goes_epoch_to_datetime(goes_dataset['time'][:])
+    if spacecraftdata3 is not None:
+        ax1.plot(spacecraftdata3[:, 0], label=f'{whatspacecraft3} X', color='blue')
+        ax2.plot(spacecraftdata3[:, 1], label=f'{whatspacecraft3} Y', color='blue')
+        ax3.plot(spacecraftdata3[:, 2], label=f'{whatspacecraft3} Z', color='blue')
 
-    gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
-                                         gk2a_dataset['b_ygse'][:],
-                                         gk2a_dataset['b_zgse'][:]))
 
-    goes_bgse_stacked = stack_from_data(goes_dataset['b_gse'])
-    goes_bgse_stacked = fix_nan_for_goes(goes_bgse_stacked)
+    plt.tight_layout()
+    ax1.legend()
+    ax2.legend()
+    ax3.legend()
 
-    # plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
+    plt.show()
 
-    # Load the time data
-    # goes_time = load_pickle_file(goes_pickle_path)['time_min']
-    # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
+# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+# goes_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
+# ----
+# goes_time_fromnc = goes_epoch_to_datetime(goes_dataset['time'][:])
+#
+# gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
+#                                      gk2a_dataset['b_ygse'][:],
+#                                      gk2a_dataset['b_zgse'][:]))
+#
+# goes_bgse_stacked = stack_from_data(goes_dataset['b_gse'])
+# goes_bgse_stacked = fix_nan_for_goes(goes_bgse_stacked)
+#
+# # plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
+#
+# # Load the time data
+# # goes_time = load_pickle_file(goes_pickle_path)['time_min']
+# # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
+#
+# # For plot title, mainly
+# date_str = '2022-08-02'
+#
+# plot_BGSE_fromdata(goes_bgse_stacked, 'goes')
+# plot_BGSE_fromdata(gk2a_bgse_stacked, 'gk2a')
+#
+# goes_VDH = gse_to_vdh(goes_bgse_stacked, goes_time_fromnc)
+# # print(goes_VDH)
+# gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
+# # print(gk2a_VDH)
+#
+# plot_magnetic_inclination_over_time(goes_time_fromnc, goes_VDH, gk2a_VDH,
+#                                     date_str)
+# ----
 
-    # For plot title, mainly
-    date_str = '2022-08-15'
+# if __name__ == "__main__":
+# Pickle file paths:
+# goes_pickle_path = 'Z:/Data/GOES18/model_outs/20221217/modout_20221217' \
+#                    '.pickle'
+# gk2a_pickle_path = 'Z:/Data/GK2A/model_outputs/20221217' \
+#                    '/sosmag_modout_2022-12-17.pickle'
 
-    plot_BGSE_fromdata(goes_bgse_stacked, 'goes')
-    plot_BGSE_fromdata(gk2a_bgse_stacked, 'gk2a')
+# Load GOES and GK2A mag data
+# goes_data = load_pickle_file(goes_pickle_path)['sat']
+# gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
+# print(goes_data.dtype)
 
-    goes_VDH = gse_to_vdh(goes_bgse_stacked, goes_time_fromnc)
-    # print(goes_VDH)
-    gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
-    # print(gk2a_VDH)
+goes18coloc_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220802_v2-0-2.nc')
+goes17coloc_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/08/dn_magn-l2-avg1m_g17_d20220802_v2-0-2.nc')
 
-    plot_magnetic_inclination_over_time(goes_time_fromnc, goes_VDH, gk2a_VDH,
-                                        date_str)
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220802_b_gse.nc')
+
+goes_time_fromnc = goes_epoch_to_datetime(goes18coloc_dataset['time'][:])
+
+
+goes18_bgse_stacked = stack_from_data(goes18coloc_dataset['b_gse'])
+goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
+
+goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
+goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
+
+gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:], gk2a_dataset['b_ygse'][:], gk2a_dataset['b_zgse'][:]))
+
+
+# plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
+
+# Load the time data
+# goes_time = load_pickle_file(goes_pickle_path)['time_min']
+# gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
+
+# For plot title, mainly
+date_str = '2022-08-02'
+
+# plot_BGSE_fromdata(goes17_bgse_stacked, 'goes17')
+# plot_BGSE_fromdata(goes18_bgse_stacked, 'goes18')
+
+# plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18')
+plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18')
+
+goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
+# print(goes_VDH)
+goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
+# print(gk2a_VDH)
+gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
+
+plot_magnetic_inclination_over_time(goes_time_fromnc, goes17_VDH, goes18_VDH,
+                                    date_str)
+
+plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, goes17_VDH, goes18_VDH, gk2a_VDH, date_str)
