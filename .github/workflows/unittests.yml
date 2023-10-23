@@ -1,0 +1,22 @@
+name: Python Tests
+
+on: [push]  # Triggers the workflow on code pushes
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8  # Choose the Python version you need
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt  # Install your project's dependencies
+
+    - name: Run Tests
+      run: python -m unittest discover -s tests  # Replace with your actual test command
