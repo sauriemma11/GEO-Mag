@@ -1,19 +1,30 @@
 from data_loader import *
 from plotter import *
 import netCDF4 as nc
+import argparse
 
 def main():
-    goes18coloc_dataset = nc.Dataset(
-        'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
-    goes17coloc_dataset = nc.Dataset(
-        'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/08/dn_magn-l2-avg1m_g17_d20220815_v2-0-2.nc')
-    gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+    # goes18coloc_dataset = nc.Dataset(
+    #     'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
+    # goes17coloc_dataset = nc.Dataset(
+    #     'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/08/dn_magn-l2-avg1m_g17_d20220815_v2-0-2.nc')
+    # gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--goes17-file", required=True, help="File path for GOES-17 data")
+    parser.add_argument("--goes18-file", required=True, help="File path for GOES-18 data")
+    parser.add_argument("--sosmag-file", required=True, help="File path for SOSMAG data")
+
+    args = parser.parse_args()
+
+    goes18coloc_dataset = nc.Dataset(args.goes18_file)
+    goes17coloc_dataset = nc.Dataset(args.goes17_file)
+    gk2a_dataset = nc.Dataset(args.sosmag_file)
 
     goes_time_fromnc = goes_epoch_to_datetime(goes18coloc_dataset['time'][:])
     goes18_bgse_stacked = process_goes_dataset(goes18coloc_dataset['b_gse'])
     goes17_bgse_stacked = process_goes_dataset(goes17coloc_dataset['b_gse'])
 
-    # gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:], gk2a_dataset['b_ygse'][:], gk2a_dataset['b_zgse'][:]))
     gk2a_bgse_stacked = stack_gk2a_data(gk2a_dataset)
 
     plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18','SOSMAG',gk2a_bgse_stacked)
