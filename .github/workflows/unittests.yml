@@ -21,4 +21,4 @@ jobs:
     - name: Run test_data_loader
       run: |
         cd test/unit
-        python .\test_data_loader.py
+        python test_data_loader.py
