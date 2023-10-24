@@ -1,0 +1,6 @@
+cdasws==1.7.43
+matplotlib==3.6.2
+netCDF4==1.6.4
+numpy==1.23.5
+pandas==1.5.2
+spacepy==0.4.1
