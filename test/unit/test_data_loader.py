@@ -2,7 +2,7 @@ import unittest
 import sys
 import numpy as np
 
-sys.path.insert(0, '../../src')
+sys.path.insert(0, '../../src')  #noqa
 from data_loader import *
 
 
