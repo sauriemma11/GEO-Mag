@@ -16,9 +16,9 @@ jobs:
         python-version: 3.8
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: pip install -r requirments.txt
 
     - name: Run test_data_loader
       run: |
         cd test/unit
-        python .\test_data_loader.py
+        python test_data_loader.py
