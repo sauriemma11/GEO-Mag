@@ -48,7 +48,7 @@ def main():
     date_str = get_date_str_from_goesTime(goes_time_fromnc)
 
     # Plot B field in GSE coords:
-    plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18','SOSMAG',gk2a_bgse_stacked, date_str, save_path)
+    plot_BGSE_fromdata_ontop(goes_time_fromnc, goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18','SOSMAG',gk2a_bgse_stacked, date_str, save_path)
 
     # Plot mag incl (theta) over time:
     plot_magnetic_inclination_over_time_3sc(date_str,goes_time_fromnc,goes17_VDH,goes18_VDH,gk2a_VDH,save_path)
