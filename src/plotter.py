@@ -10,6 +10,69 @@ SOSMAG : blue
 """
 
 
+def plot_BGSE_fromdata_ontop(goes_time, spacecraftdata1=None, spacecraftdata2=None, whatspacecraft1=None, whatspacecraft2=None, whatspacecraft3=None, spacecraftdata3=None, date_str=None, save_path=None):
+    """
+    Plot the B_GSE data from multiple spacecraft on top of each other.
+    ** Note: All 3 spacecraft are optional, but at least one must be provided.
+
+    :param spacecraftdata1: Data for the first spacecraft to plot (optional).
+    :param spacecraftdata2: Data for the second spacecraft to plot (optional).
+    :param whatspacecraft1: A label for the first spacecraft (optional).
+    :param whatspacecraft2: A label for the second spacecraft (optional).
+    :param whatspacecraft3: A label for the third spacecraft (optional).
+    :param spacecraftdata3: Data for the third spacecraft (optional).
+    :param date_str: A string representing the date (e.g., "YYYY-MM-DD").
+    :param save_path: The file path to save the generated plot (optional).
+
+    Example:
+    plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1, whatspacecraft2, whatspacecraft3, spacecraftdata3, date_str, save_path)
+    """
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+
+    if date_str is not None:
+        ax1.set_title(f'B Field $GSE$, {date_str}')
+
+    if spacecraftdata1 is not None and whatspacecraft1 is not None:
+        ax1.plot(goes_time, spacecraftdata1[:, 0], label=f'{whatspacecraft1} ', color='red')
+        ax2.plot(goes_time, spacecraftdata1[:, 1], label=f'{whatspacecraft1} ', color='red')
+        ax3.plot(goes_time, spacecraftdata1[:, 2], label=f'{whatspacecraft1} ', color='red')
+
+    if spacecraftdata2 is not None and whatspacecraft2 is not None:
+        ax1.plot(goes_time, spacecraftdata2[:, 0], label=f'{whatspacecraft2} ', color='orange')
+        ax2.plot(goes_time, spacecraftdata2[:, 1], label=f'{whatspacecraft2} ', color='orange')
+        ax3.plot(goes_time, spacecraftdata2[:, 2], label=f'{whatspacecraft2} ', color='orange')
+
+    if spacecraftdata3 is not None and whatspacecraft3 is not None:
+        ax1.plot(goes_time, spacecraftdata3[:, 0], label=f'{whatspacecraft3} X', color='blue')
+        ax2.plot(goes_time, spacecraftdata3[:, 1], label=f'{whatspacecraft3} Y', color='blue')
+        ax3.plot(goes_time, spacecraftdata3[:, 2], label=f'{whatspacecraft3} Z', color='blue')
+
+    ax1.legend(loc='upper right')
+
+    ax1.set_ylabel('$B_x$ [nT]')
+    ax2.set_ylabel('$B_y$ [nT]')
+    ax3.set_ylabel('$B_z$ [nT]')
+
+    ax3.set_xlabel('Time [h]')
+
+    ax1.set_xticklabels([])
+    ax2.set_xticklabels([])
+    # Only show 3rd panel x axis labels:
+    ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+
+    plt.tight_layout()
+    # TODO: Fix save file, it is not working currently.
+    if save_path:
+        save_file_as = f'BGSE_{date_str}'
+        plt.savefig(f"{save_path}/{save_file_as}.png")
+        print(f'fig saved as {save_file_as}')
+        plt.show()
+    else:
+        plt.show()
+
+
 def plot_magnetic_inclination_over_time_3sc(date_str, goes_time, goes17_data=None, goes18_data=None, gk2a_data=None, save_path=None):
     """
     Plot magnetic inclination angle (θ) for multiple spacecraft over time.
@@ -51,57 +114,6 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time, goes17_data=Non
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
-        plt.show()
-    else:
-        plt.show()
-
-
-def plot_BGSE_fromdata_ontop(spacecraftdata1=None, spacecraftdata2=None, whatspacecraft1=None, whatspacecraft2=None, whatspacecraft3=None, spacecraftdata3=None, date_str=None, save_path=None):
-    """
-    Plot the B_GSE data from multiple spacecraft on top of each other.
-    ** Note: All 3 spacecraft are optional, but at least one must be provided.
-
-    :param spacecraftdata1: Data for the first spacecraft to plot (optional).
-    :param spacecraftdata2: Data for the second spacecraft to plot (optional).
-    :param whatspacecraft1: A label for the first spacecraft (optional).
-    :param whatspacecraft2: A label for the second spacecraft (optional).
-    :param whatspacecraft3: A label for the third spacecraft (optional).
-    :param spacecraftdata3: Data for the third spacecraft (optional).
-    :param date_str: A string representing the date (e.g., "YYYY-MM-DD").
-    :param save_path: The file path to save the generated plot (optional).
-
-    Example:
-    plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1, whatspacecraft2, whatspacecraft3, spacecraftdata3, date_str, save_path)
-    """
-
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
-
-    if date_str is not None:
-        ax1.set_title(f'B_GSE, {date_str}')
-
-    if spacecraftdata1 is not None and whatspacecraft1 is not None:
-        ax1.plot(spacecraftdata1[:, 0], label=f'{whatspacecraft1} X', color='red')
-        ax2.plot(spacecraftdata1[:, 1], label=f'{whatspacecraft1} Y', color='red')
-        ax3.plot(spacecraftdata1[:, 2], label=f'{whatspacecraft1} Z', color='red')
-
-    if spacecraftdata2 is not None and whatspacecraft2 is not None:
-        ax1.plot(spacecraftdata2[:, 0], label=f'{whatspacecraft2} X', color='orange')
-        ax2.plot(spacecraftdata2[:, 1], label=f'{whatspacecraft2} Y', color='orange')
-        ax3.plot(spacecraftdata2[:, 2], label=f'{whatspacecraft2} Z', color='orange')
-
-    if spacecraftdata3 is not None and whatspacecraft3 is not None:
-        ax1.plot(spacecraftdata3[:, 0], label=f'{whatspacecraft3} X', color='blue')
-        ax2.plot(spacecraftdata3[:, 1], label=f'{whatspacecraft3} Y', color='blue')
-        ax3.plot(spacecraftdata3[:, 2], label=f'{whatspacecraft3} Z', color='blue')
-
-    plt.tight_layout()
-    ax1.legend()
-
-    # TODO: Fix save file, it is not working currently.
-    if save_path:
-        save_file_as = f'BGSE_{date_str}'
-        plt.savefig(f"{save_path}/{save_file_as}.png")
-        print(f'fig saved as {save_file_as}')
         plt.show()
     else:
         plt.show()
