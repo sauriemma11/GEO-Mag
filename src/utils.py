@@ -14,8 +14,25 @@ def calculate_time_difference(longitude_degrees, hemisphere='W'):
     return time_diff
 
 
+def calculate_std_dev(dataset1, dataset2):
+    difference = np.array(dataset1) - np.array(dataset2)
+    return np.nanstd(difference)
+
+
 def calculate_total_magnetic_field(x, y, z):
     return np.sqrt(x ** 2 + y ** 2 + z ** 2)
+
+
+def calc_line_of_best_fit(x, y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    mask = np.isfinite(x) & np.isfinite(
+        y)  # Ensure x and y are arrays and create the mask
+    x_masked = x[mask]
+    y_masked = y[mask]
+    coeff = np.polyfit(x_masked, y_masked, 1)
+    polynomial = np.poly1d(coeff)
+    return polynomial
 
 
 def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):

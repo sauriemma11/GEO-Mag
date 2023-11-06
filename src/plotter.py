@@ -1,3 +1,4 @@
+import utils
 from coord_transform import *
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -249,169 +250,188 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 
 # TODO: make this more general/WORK
 
-def plot_magnetic_field_difference(goes_time, goes_data, gk2a_data, date_str,
-                                   use_omni, what_model, what_spacecraft,
-                                   show_figs=True, save_figs=False):
-    gk2a_time_diff = calculate_time_difference(128.2, 'E')
-    g18_time_diff = calculate_time_difference(137.2)
+# def plot_magnetic_field_difference(goes_time, goes_data, gk2a_data,
+# date_str, use_omni, what_model,what_spacecraft, show_figs=True,
+# save_figs=False):
+#     gk2a_time_diff = calculate_time_difference(128.2, 'E')
+#     g18_time_diff = calculate_time_difference(137.2)
+#
+#     date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
+#     date_obj_previous_day = date_obj - dt.timedelta(
+#         days=1)  # For plotting noon time GK2A
+#
+#     midnight_time = dt.datetime(date_obj.year, date_obj.month,
+#     date_obj.day, 0,
+#                                 0)
+#
+#     noon_time = dt.datetime(date_obj.year, date_obj.month, date_obj.day,
+#     12, 0)
+#     noon_time_GK2A = dt.datetime(date_obj_previous_day.year,
+#                                  date_obj_previous_day.month,
+#                                  date_obj_previous_day.day, 12, 0)
+#
+#     gk2a_midnight_time = midnight_time + dt.timedelta(hours=gk2a_time_diff)
+#     g18_midnight_time = midnight_time + dt.timedelta(hours=g18_time_diff)
+#     gk2a_noon_time = noon_time_GK2A + dt.timedelta(hours=gk2a_time_diff)
+#     g18_noon_time = noon_time + dt.timedelta(hours=g18_time_diff)
+#
+#     print(gk2a_midnight_time, gk2a_noon_time, "GK2A")
+#     print(g18_midnight_time, g18_noon_time, "G18")
+#
+#     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey=True)
+#
+#     if use_omni:
+#         title = f'(SOSMAG - {what_model}), ({what_spacecraft} - ' \
+#                 f'{what_model}), using OMNI \n{date_str}'
+#     else:
+#         title = f'(SOSMAG - {what_model}), ({what_spacecraft} - {
+#         what_model}) \n{date_str}'
+#
+#     ax1.set_title(title)
+#
+#     y_annotation = 10
+#
+#     ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='blue', fontsize=12,
+#                  annotation_clip=True)
+#     ax1.annotate('M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='red', fontsize=12,
+#                  annotation_clip=True)
+#     ax1.annotate('N', xy=(mdates.date2num(g18_noon_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='red', fontsize=12,
+#                  annotation_clip=False)
+#     ax1.annotate('N', xy=(mdates.date2num(gk2a_noon_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='blue', fontsize=12,
+#                  annotation_clip=False)
+#
+#     # print(gk2a_midnight_time)
+#     # print(type(goes_time[2]))
+#     ax1.plot(goes_time, goes_data[:, 0], 'r')
+#     ax2.plot(goes_time, goes_data[:, 1], 'r')
+#     ax3.plot(goes_time, goes_data[:, 2], 'r')
+#
+#     ax1.plot(goes_time, gk2a_data[:, 0], 'b')
+#     ax2.plot(goes_time, gk2a_data[:, 1], 'b')
+#     ax3.plot(goes_time, gk2a_data[:, 2], 'b')
+#
+#     ax1.legend(['GOES18', 'SOSMAG'])
+#
+#     ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+#     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     ax2.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+#     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+#     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#
+#     ax1.set_ylabel('B Field GSE, cart. [nT]')
+#     ax3.set_xlabel('Time [h]')
+#
+#     plt.tight_layout()
+#
+#     if show_figs:
+#         plt.show()
+#
+#     if use_omni:
+#         filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}_SOSMAG_{
+#         date_str2}_3plts_OMNI.png'
+#     else:
+#         filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/{
+#         what_spacecraft}/{what_spacecraft}_SOSMAG_{what_model}_{
+#         date_str2}_3plts.png'
+#
+#     if save_figs:
+#         fig.savefig(filename)
+#
+#     # Plot total mag field differences
+#     fig, (ax1) = plt.subplots(1, 1)
+#     ax1.plot(goes18_time_1min, subtr)
+#     ax1.set_xlabel('Time')
+#     ax1.set_ylabel('|B| [nT]')
+#     ax1.set_title('Total B field difference for ' + date_str)
+#     ax1.xaxis.set_major_locator(
+#         mdates.HourLocator(interval=2))  # Show every 2 hours
+#     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     ax1.legend().set_visible(False)
+#     plt.tight_layout()
+#     if show_figs:
+#         plt.show()
+#
+#     if use_omni:
+#         filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
+#                    f'{what_model}-{what_spacecraft}-{what_model}_totalB_{
+#         date_str2}_OMNI.png'
+#                    }
+#     else:
+#         filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
+#                    f'{what_spacecraft}/sosmag-{w
+#         hat_model}-{what_spacecraft}-{what_model}_totalB_{date_str2}.png'
+#
+#     if save_figs:
+#         fig.savefig(filename)
+#
+#     fig, (ax1) = plt.subplots(1, 1)
+#     ax1.plot(goes18_time_1min, gk2a_ts04_diff - goes18_ts04_diff)
+#     date_str = gk2a_time_1min[0].strftime('%Y-%m-%d')
+#
+#     ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='blue', fontsize=12)
+#     ax1.annotate(f'M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
+#                  xytext=(-15, 10),
+#                  textcoords='offset points', color='red', fontsize=12)
+#
+#     title = '(SOSMAG - ' + whatModel + ') - (' + whatSpacecraft + ' - ' +
+#             whatModel + ')\n{}'.format(
+#         date_str)
+#     ax1.set_title(title)
+#     ax1.set(xlabel='Time [h]', ylabel='B Field GSE [nT]')
+#
+#     ax1.legend(['x', 'y', 'z'], bbox_to_anchor=(1.19, 1), loc='upper right')
+#
+#     ax1.xaxis.set_major_locator(
+#         mdates.HourLocator(interval=2))  # show every 2 hours
+#     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     print(goes18_time_1min[:])
+#     fig.patch.set_facecolor('white')
+#
+#     fig.patch.set_alpha(0.6)
+#     # ax1.grid(False)
+#
+#     plt.tight_layout()
+#
+#     if show_figs:
+#         plt.show()
+#
+#     if use_omni:
+#         filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
+#                    f'{what_model}-{what_spacecraft}-{what_model}_GSE_{
+#         date_str2}_OMNI.png'
+#                    }
+#     else:
+#         filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
+#                    f'{what_spacecraft}/sosmag-{w
+#         hat_model}-{what_spacecraft}-{what_model}_GSE_{date_str2}.png'
+#
+#     if save_figs:
+#         fig.savefig(filename)
 
-    date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
-    date_obj_previous_day = date_obj - dt.timedelta(
-        days=1)  # For plotting noon time GK2A
 
-    midnight_time = dt.datetime(date_obj.year, date_obj.month, date_obj.day, 0,
-                                0)
+def plot_sc_vs_sc_scatter(x, y, x_label='X-axis', y_label='Y-axis',
+                          title='Scatter Plot', lineofbestfit=False):
+    plt.scatter(x, y)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.grid(True)
 
-    noon_time = dt.datetime(date_obj.year, date_obj.month, date_obj.day, 12, 0)
-    noon_time_GK2A = dt.datetime(date_obj_previous_day.year,
-                                 date_obj_previous_day.month,
-                                 date_obj_previous_day.day, 12, 0)
+    if lineofbestfit:
+        polynomial = utils.calc_line_of_best_fit(x, y)
+        x_fit = np.linspace(min(x), max(x), len(x))
+        y_fit = polynomial(x_fit)
+        plt.plot(x_fit, y_fit, color='red', linewidth=1)
 
-    gk2a_midnight_time = midnight_time + dt.timedelta(hours=gk2a_time_diff)
-    g18_midnight_time = midnight_time + dt.timedelta(hours=g18_time_diff)
-    gk2a_noon_time = noon_time_GK2A + dt.timedelta(hours=gk2a_time_diff)
-    g18_noon_time = noon_time + dt.timedelta(hours=g18_time_diff)
-
-    print(gk2a_midnight_time, gk2a_noon_time, "GK2A")
-    print(g18_midnight_time, g18_noon_time, "G18")
-
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey=True)
-
-    if use_omni:
-        title = f'(SOSMAG - {what_model}), ({what_spacecraft} - ' \
-                f'{what_model}), using OMNI \n{date_str}'
-    else:
-        title = f'(SOSMAG - {what_model}), ({what_spacec
-        raft} - {what_model}) \n{date_str}'
-
-    ax1.set_title(title)
-
-    y_annotation = 10
-
-    ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='blue', fontsize=12,
-                 annotation_clip=True)
-    ax1.annotate('M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='red', fontsize=12,
-                 annotation_clip=True)
-    ax1.annotate('N', xy=(mdates.date2num(g18_noon_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='red', fontsize=12,
-                 annotation_clip=False)
-    ax1.annotate('N', xy=(mdates.date2num(gk2a_noon_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='blue', fontsize=12,
-                 annotation_clip=False)
-
-    # print(gk2a_midnight_time)
-    # print(type(goes_time[2]))
-    ax1.plot(goes_time, goes_data[:, 0], 'r')
-    ax2.plot(goes_time, goes_data[:, 1], 'r')
-    ax3.plot(goes_time, goes_data[:, 2], 'r')
-
-    ax1.plot(goes_time, gk2a_data[:, 0], 'b')
-    ax2.plot(goes_time, gk2a_data[:, 1], 'b')
-    ax3.plot(goes_time, gk2a_data[:, 2], 'b')
-
-    ax1.legend(['GOES18', 'SOSMAG'])
-
-    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-    ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-
-    ax1.set_ylabel('B Field GSE, cart. [nT]')
-    ax3.set_xlabel('Time [h]')
-
-    plt.tight_layout()
-
-    if show_figs:
-        plt.show()
-
-    if use_omni:
-        filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}_SOSMAG_' \
-                   f'{date_str2}_3plts_OMNI.png'
-    else:
-        filename = f'Z:/Data/sos-{what_model}-goes-{w
-        hat_model}/{what_spacecraft}/{what_spacecraft}_SOSMAG_{what_model}_{
-            date_str2}_3plts.png'
-
-    if save_figs:
-        fig.savefig(filename)
-
-    # Plot total mag field differences
-    fig, (ax1) = plt.subplots(1, 1)
-    ax1.plot(goes18_time_1min, subtr)
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('|B| [nT]')
-    ax1.set_title('Total B field difference for ' + date_str)
-    ax1.xaxis.set_major_locator(
-        mdates.HourLocator(interval=2))  # Show every 2 hours
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-    ax1.legend().set_visible(False)
-    plt.tight_layout()
-    if show_figs:
-        plt.show()
-
-    if use_omni:
-        filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
-                   f'{what_model}-{what_spacecraft}-{what_model}_totalB_{
-        date_str2}_OMNI.png'
-                   }
-    else:
-        filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
-                   f'{what_spacecraft}/sosmag-{w
-        hat_model}-{what_spacecraft}-{what_model}_totalB_{date_str2}.png'
-
-    if save_figs:
-        fig.savefig(filename)
-
-    fig, (ax1) = plt.subplots(1, 1)
-    ax1.plot(goes18_time_1min, gk2a_ts04_diff - goes18_ts04_diff)
-    date_str = gk2a_time_1min[0].strftime('%Y-%m-%d')
-
-    ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='blue', fontsize=12)
-    ax1.annotate(f'M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
-                 xytext=(-15, 10),
-                 textcoords='offset points', color='red', fontsize=12)
-
-    title = '(SOSMAG - ' + whatModel + ') - (' + whatSpacecraft + ' - ' +
-            whatModel + ')\n{}'.format(
-        date_str)
-    ax1.set_title(title)
-    ax1.set(xlabel='Time [h]', ylabel='B Field GSE [nT]')
-
-    ax1.legend(['x', 'y', 'z'], bbox_to_anchor=(1.19, 1), loc='upper right')
-
-    ax1.xaxis.set_major_locator(
-        mdates.HourLocator(interval=2))  # show every 2 hours
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-    print(goes18_time_1min[:])
-    fig.patch.set_facecolor('white')
-
-    fig.patch.set_alpha(0.6)
-    # ax1.grid(False)
-
-    plt.tight_layout()
-
-    if show_figs:
-        plt.show()
-
-    if use_omni:
-        filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
-                   f'{what_model}-{what_spacecraft}-{what_model}_GSE_{
-        date_str2}_OMNI.png'
-                   }
-    else:
-        filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
-                   f'{what_spacecraft}/sosmag-{w
-        hat_model}-{what_spacecraft}-{what_model}_GSE_{date_str2}.png'
-
-    if save_figs:
-        fig.savefig(filename)
+    plt.show()

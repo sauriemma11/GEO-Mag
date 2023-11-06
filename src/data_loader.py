@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from cdasws import CdasWs
 import datetime
+import kp_data_processing as kp
 
 cdas = CdasWs()
 if "CDF_LIB" not in os.environ:
@@ -11,6 +12,40 @@ if "CDF_LIB" not in os.environ:
     os.environ["CDF_BASE"] = base_dir
     os.environ["CDF_BIN"] = base_dir + "/bin"
     os.environ["CDF_LIB"] = base_dir + "/lib"
+
+
+def load_subtr_data(file_path):
+    """
+    Load subtraction data from a pickle file.
+
+    Args:
+        file_path (str): The path to the pickle file containing the data.
+
+    Returns:
+        tuple: A tuple containing datetime values and subtraction data.
+               - datetime_list (list): List of datetime values.
+               - subtr_list (list): List of subtraction data.
+
+    Raises:
+        FileNotFoundError: If the specified file_path does not exist.
+        Exception: If there's an issue with loading the data from the file.
+    """
+    try:
+        with open(file_path, 'rb') as file:
+            data = pickle.load(file)
+            # print(file)
+            # Assuming data is a dictionary with keys 'datetime' and
+            # 'subtraction'
+            datetime_list = data.get('datetime', [])
+            subtr_list = data.get('subtration', [])
+
+            return datetime_list, subtr_list
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found at {file_path}")
+
+    except Exception as e:
+        raise Exception(f"Error loading data from {file_path}: {str(e)}")
 
 
 def process_goes_dataset(dataset):
@@ -38,7 +73,7 @@ def fix_nan_for_goes(data, nanvalue=-9998.0):
     return data
 
 
-def load_pickle_file(file_path):
+def load_model_subtr_gse_from_pickle_file(file_path):
     """
     Load a python pickle file and return its data
     ***Currently unused
@@ -48,8 +83,20 @@ def load_pickle_file(file_path):
     """
     with open(file_path, 'rb') as file:
         data = pickle.load(file)
-    return data
+        # print(data.keys())
+        time = data['time_min']
+        ts89_gse = data['ts89-sat']
+        sat_gse = data['sat_gse']
+    return time, ts89_gse, sat_gse
 
+
+# sos_pickle = 'Z:/Data/GK2A/model_outputs/sosmag_modout_892019-04-01.pickle'
+# sos_data = load_pickle_file(sos_pickle)
+# print(sos_data.keys())
+#
+# g17_pickle = 'Z:/Data/GOES17/model_outs/G17_modout_892019-04-01.pickle'
+# g17_data = load_model_gse_from_pickle_file(g17_pickle)
+# print(g17_data.keys())
 
 def stack_from_data(sc_data):
     """
