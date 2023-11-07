@@ -2,6 +2,7 @@ import utils
 from coord_transform import *
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.dates import DateFormatter
 from utils import *
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
@@ -447,36 +448,22 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
     t89_x_component, t89_y_component, t89_z_component = unpack_components(
         t89_data_list)
 
+    # Debugging prints:
+    # print(max(t89_x_component), max(t89_z_component))
+    # print(np.argmax(t89_x_component), np.argmax(t89_z_component))
+    # print(timestamps[np.argmax(t89_x_component)])
+
     # Create subplots for the x, y, and z components vs. T89 components
     fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 
     # Convert timestamps to numeric values for coloring
-    numeric_timestamps = convert_timestamps_to_numeric(timestamps)
-
-    # Convert Pandas Timestamp objects to Python datetime objects
-    timestamps = [pd.Timestamp(ts).to_pydatetime() for ts in timestamps]
-
-    # Extract and format the months from timestamps for the colorbar labels
-    months = [dtm.utcfromtimestamp(ts.timestamp()).strftime('%m') for ts in
-              timestamps]
-
-    # Get unique sorted month labels
-    month_labels = sorted(list(set(months)))
-
-    # Create a mapping from month labels to colors
-    month_colors = {month: i / (len(month_labels) - 1) for i, month in
-                    enumerate(month_labels)}
-
-    # Create an array of colors corresponding to each timestamp
-    color_array = [month_colors[month] for month in months]
+    numeric_timestamps = mdates.date2num(timestamps)
 
     # Create a Normalize object to map numeric colors to the range [0, 1]
-    color_norm = Normalize(vmin=0, vmax=1)
+    color_norm = Normalize(vmin=min(numeric_timestamps),
+                           vmax=max(numeric_timestamps))
 
-    # Create a ScalarMappable to generate a colorbar
-    color_cmap = ScalarMappable(norm=color_norm, cmap='viridis')
-
-    # Scatter plots for components vs. T89 components with month-based color
+    # Scatter plots for components vs. T89 components with date-based color
     # mapping
     for ax, component, t89_component, label in zip(axs,
                                                    [x_component, y_component,
@@ -485,16 +472,14 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
                                                     t89_y_component,
                                                     t89_z_component],
                                                    ['X', 'Y', 'Z']):
-        scatter = ax.scatter(component, t89_component, c=color_array,
+        scatter = ax.scatter(component, t89_component, c=numeric_timestamps,
                              cmap='viridis', norm=color_norm)
         ax.set_xlabel(f'{spacecraft_name} {label} Component')
         ax.set_ylabel(f'T89 {label} Component')
         ax.set_title(
             f'{spacecraft_name} {label} Component vs T89 {label} Component')
-        cbar = fig.colorbar(color_cmap, ax=ax,
-                            ticks=np.linspace(0, 1, len(month_labels)),
-                            label='Month')
-        cbar.set_ticklabels(month_labels)  # Set tick labels as numeric months
+        fig.colorbar(scatter, ax=ax, format=DateFormatter('%m-%d'),
+                     label='Date')
 
     # Show the plot
     plt.tight_layout()

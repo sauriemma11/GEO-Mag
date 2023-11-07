@@ -13,7 +13,79 @@ if "CDF_LIB" not in os.environ:
     os.environ["CDF_BIN"] = base_dir + "/bin"
     os.environ["CDF_LIB"] = base_dir + "/lib"
 
+def load_and_trim_data(pickle_dir, start_date, end_date):
+    """
+    Load and filter data from pickle files based on a specified date range.
 
+    Args:
+        pickle_dir (str): The directory containing pickle files with the data.
+        start_date (datetime): The start date of the desired date range (
+        inclusive).
+        end_date (datetime): The end date of the desired date range (
+        inclusive).
+
+    Returns:
+        tuple: A tuple containing three lists: (time_list, data_list,
+        subtr_list).
+            - time_list (list of datetime): List of datetime objects
+            representing timestamps (sorted).
+            - data_list (list): List of data points corresponding to each
+            timestamp (sorted).
+            - subtr_list (list): List of subtracted data points
+            corresponding to each timestamp (sorted).
+
+    Note:
+        This function loads data from pickle files in the specified
+        directory, filters it
+        based on the desired date range, and sorts all lists based on the
+        time_list.
+
+    Example:
+        To load and filter data from a directory 'data_dir' for the date
+        range from 'start_date'
+        to 'end_date', you can call the function as follows:
+
+        start_date = datetime.datetime(2022, 4, 1)
+        end_date = datetime.datetime(2022, 9, 30)
+        time_list, data_list, subtr_list = load_and_trim_data('data_dir',
+        start_date, end_date)
+
+    """
+    time_list = []
+    data_list = []
+    subtr_list = []
+
+    for filename in os.listdir(pickle_dir):
+        if filename.endswith('.pickle'):
+            file_path = os.path.join(pickle_dir, filename)
+            time, ts89_gse, sat_gse = load_model_subtr_gse_from_pickle_file(
+                file_path)
+
+            # Convert time to datetime objects
+            time = [pd.to_datetime(t) for t in time]
+
+            # Filter data based on the desired date range
+            filtered_time = []
+            filtered_data = []
+            filtered_subtr = []
+            for t, data, subtr in zip(time, sat_gse, ts89_gse):
+                if start_date <= t <= end_date:
+                    filtered_time.append(t)
+                    filtered_data.append(data)
+                    filtered_subtr.append(subtr)
+
+            # Extend the lists with filtered data
+            time_list.extend(filtered_time)
+            data_list.extend(filtered_data)
+            subtr_list.extend(filtered_subtr)
+
+    # Sort all lists based on the time_list
+    sorted_indices = sorted(range(len(time_list)), key=lambda i: time_list[i])
+    time_list = [time_list[i] for i in sorted_indices]
+    data_list = [data_list[i] for i in sorted_indices]
+    subtr_list = [subtr_list[i] for i in sorted_indices]
+
+    return time_list, data_list, subtr_list
 def load_subtr_data(file_path):
     """
     Load subtraction data from a pickle file.
@@ -76,7 +148,6 @@ def fix_nan_for_goes(data, nanvalue=-9998.0):
 def load_model_subtr_gse_from_pickle_file(file_path):
     """
     Load a python pickle file and return its data
-    ***Currently unused
 
     :param file_path: path to pickle file to load
     :return: Loaded data from pickle file
@@ -138,12 +209,6 @@ def stack_gk2a_data(sc_data):
     gk2a_bgse_stacked = np.column_stack((b_x, b_y, b_z))
     return gk2a_bgse_stacked
 
-
-# def fix_nan_for_goes(data, nanvalue=-9998.0):
-#     data[data < nanvalue] = np.nan
-#     return data
-
-# ^ Repeat function? TODO: Delete if unneeded
 
 def goes_epoch_to_datetime(timestamp):
     """
