@@ -4,6 +4,7 @@ import data_loader
 import kp_data_processing as kp
 import pandas as pd
 import os
+import datetime as dtm
 import plotter
 import numpy as np
 
@@ -12,11 +13,6 @@ kp_data_txt_path = 'C:/Users/sarah.auriemma/Desktop/Data_new/kp_2019.txt'
 dfkp = kp.readKpData(kp_data_txt_path)
 dfkp['Time'] = pd.to_datetime(dfkp['Time'])
 
-# # load subtr pickle data:
-# pickle_dir = 'Z:/Data/sos-89-goes-89/g17/subtr_pickles' # this is
-# subtracted pickles, we dont want that
-# datetime_list = []
-# subtr_list = []
 
 sosmag_pickle_dir = 'C:/Users/sarah.auriemma/Desktop/Data_new/6month_study' \
                     '/sosmag'
@@ -57,17 +53,18 @@ gk2a_time_list = [pd.to_datetime(time) for time in gk2a_time_list]
 g17_time_list = [pd.to_datetime(time) for time in g17_time_list]
 
 # Call the function to get the averaged lists
-gk2a_avg_time_list, gk2a_avg_data_list = utils.get_avg_data_over_interval(
-    gk2a_time_list, gk2a_data_list)
-g17_avg_time_list, g17_avg_data_list = utils.get_avg_data_over_interval(
-    g17_time_list, g17_data_list)
+# gk2a_avg_time_list, gk2a_avg_data_list = utils.get_avg_data_over_interval(
+#     gk2a_time_list, gk2a_data_list)
+# g17_avg_time_list, g17_avg_data_list = utils.get_avg_data_over_interval(
+#     g17_time_list, g17_data_list)
 
 # If you need the subtraction lists averaged as well
-gk2a_avg_subtr_time_list, gk2a_avg_subtr_list = \
-    utils.get_avg_data_over_interval(
-    gk2a_time_list, gk2a_89_subtr_list)
-g17_avg_subtr_time_list, g17_avg_subtr_list = utils.get_avg_data_over_interval(
-    g17_time_list, g17_89_subtr_list)
+# gk2a_avg_subtr_time_list, gk2a_avg_subtr_list = \
+#     utils.get_avg_data_over_interval(
+#     gk2a_time_list, gk2a_89_subtr_list)
+# g17_avg_subtr_time_list, g17_avg_subtr_list =
+# utils.get_avg_data_over_interval(
+#     g17_time_list, g17_89_subtr_list)
 
 # TODO: fix error handling
 if len(g17_data_list) == len(gk2a_data_list):
@@ -92,45 +89,50 @@ else:
 # g17_89_daa_array = np.array(filtered_g17_subtr_list)
 # g17_89_data_list = data_loader.process_goes_dataset(g17_89_data_array)
 
-stddev = utils.calculate_std_dev(g17_avg_subtr_list, gk2a_avg_subtr_list)
-print('stddev of the two sc with model subtracted: ', stddev)
-stddev = utils.calculate_std_dev(g17_avg_data_list, gk2a_avg_data_list)
-print('stddev of the two sc mag data: ', stddev)
-
 gk2a_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
-                                 for point in gk2a_avg_subtr_list]
+                                 for point in gk2a_89_subtr_list]
 g17_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
-                                for point in g17_avg_subtr_list]
+                                for point in g17_89_subtr_list]
 
 gk2a_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
                         in gk2a_data_list]
 g17_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
                        in g17_data_list]
 
-plotter.plot_sc_vs_sc_scatter(gk2a_total_mag_field_modelsub,
-                              g17_total_mag_field_modelsub, 'GK2A |B| (GSE)',
-                              'G17 |B| (GSE)', 'GK2A vs G17 GSE (T89 removed)',
-                              lineofbestfit=True)
-
-plt.plot(gk2a_time_list, gk2a_total_mag_field_modelsub,
-         label='gk2a t89 removed')
-plt.plot(gk2a_time_list, gk2a_total_mag_field, label='gk2a gse')
-plt.legend()
-plt.title('GK2A |B|')
-plt.show()
-
-plt.plot(g17_time_list, g17_total_mag_field_modelsub, label='g17 t89 removed')
-plt.plot(g17_time_list, g17_total_mag_field, label='g17 gse')
-plt.legend()
-plt.title('G17 |B|')
-plt.show()
-
-plotter.plot_sc_vs_sc_scatter(gk2a_total_mag_field, g17_total_mag_field,
-                              'GK2A |B| (GSE)', 'G17 |B| (GSE)',
-                              'GK2A vs G17 GSE', lineofbestfit=True)
+# plotter.plot_4_scatter_plots_with_best_fit(g17_total_mag_field,
+# g17_total_mag_field_modelsub, gk2a_total_mag_field,
+# gk2a_total_mag_field_modelsub)
 #
-# gk2a_x_component = [point[0] for point in gk2a_89_data_list]
-# g17_x_component = [point[0] for point in g17_89_data_list]
+# plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
+# g17_total_mag_field_modelsub, g17_time_list, gk2a_total_mag_field,
+# gk2a_total_mag_field_modelsub, gk2a_time_list)
+
+# plotter.plot_sc_vs_sc_scatter(gk2a_total_mag_field_modelsub,
+#                               g17_total_mag_field_modelsub, 'GK2A |B| (GSE)',
+#                               'G17 |B| (GSE)', 'GK2A vs G17 GSE (T89
+#                               removed)',
+#                               lineofbestfit=True)
 #
-# plotter.plot_sc_vs_sc_scatter(gk2a_x_component, g17_x_component, 'GK2A Bx
-# (GSE)', 'G17 Bx (GSE)', 'GK2A vs G17 GSE')
+# plotter.plot_sc_vs_sc_scatter(gk2a_total_mag_field, g17_total_mag_field,
+#                               'GK2A |B| (GSE)', 'G17 |B| (GSE)',
+#                               'GK2A vs G17 GSE', lineofbestfit=True)
+
+# plt.plot(gk2a_time_list, gk2a_total_mag_field_modelsub,
+#          label='gk2a t89 removed')
+# plt.plot(gk2a_time_list, gk2a_total_mag_field, label='gk2a gse')
+# plt.legend()
+# plt.title('GK2A |B|')
+# plt.show()
+#
+# plt.plot(g17_time_list, g17_total_mag_field_modelsub, label='g17 t89
+# removed')
+# plt.plot(g17_time_list, g17_total_mag_field, label='g17 gse')
+# plt.legend()
+# plt.title('G17 |B|')
+# plt.show()
+
+# plotter.plot_components_vs_t89('GK2A', gk2a_data_list, gk2a_89_subtr_list)
+# plotter.plot_components_vs_t89_with_color('GK2A', gk2a_data_list,
+# gk2a_89_subtr_list, gk2a_time_list)
+plotter.plot_components_vs_t89_with_color('G17', g17_data_list,
+                                          g17_89_subtr_list, g17_time_list)

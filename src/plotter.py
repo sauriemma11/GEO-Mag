@@ -3,7 +3,9 @@ from coord_transform import *
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from utils import *
-import datetime as dt
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
+from datetime import datetime as dtm
 
 """
 NOTE - Color of spacecraft should be same across all plotting functions
@@ -434,4 +436,140 @@ def plot_sc_vs_sc_scatter(x, y, x_label='X-axis', y_label='Y-axis',
         y_fit = polynomial(x_fit)
         plt.plot(x_fit, y_fit, color='red', linewidth=1)
 
+    plt.show()
+
+
+def plot_components_vs_t89_with_color(spacecraft_name, data_list,
+                                      t89_data_list, timestamps,
+                                      output_file=None):
+    # Unpack x, y, and z components from the data and T89 data
+    x_component, y_component, z_component = unpack_components(data_list)
+    t89_x_component, t89_y_component, t89_z_component = unpack_components(
+        t89_data_list)
+
+    # Create subplots for the x, y, and z components vs. T89 components
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Convert timestamps to numeric values for coloring
+    numeric_timestamps = convert_timestamps_to_numeric(timestamps)
+
+    # Convert Pandas Timestamp objects to Python datetime objects
+    timestamps = [pd.Timestamp(ts).to_pydatetime() for ts in timestamps]
+
+    # Extract and format the months from timestamps for the colorbar labels
+    months = [dtm.utcfromtimestamp(ts.timestamp()).strftime('%m') for ts in
+              timestamps]
+
+    # Get unique sorted month labels
+    month_labels = sorted(list(set(months)))
+
+    # Create a mapping from month labels to colors
+    month_colors = {month: i / (len(month_labels) - 1) for i, month in
+                    enumerate(month_labels)}
+
+    # Create an array of colors corresponding to each timestamp
+    color_array = [month_colors[month] for month in months]
+
+    # Create a Normalize object to map numeric colors to the range [0, 1]
+    color_norm = Normalize(vmin=0, vmax=1)
+
+    # Create a ScalarMappable to generate a colorbar
+    color_cmap = ScalarMappable(norm=color_norm, cmap='viridis')
+
+    # Scatter plots for components vs. T89 components with month-based color
+    # mapping
+    for ax, component, t89_component, label in zip(axs,
+                                                   [x_component, y_component,
+                                                    z_component],
+                                                   [t89_x_component,
+                                                    t89_y_component,
+                                                    t89_z_component],
+                                                   ['X', 'Y', 'Z']):
+        scatter = ax.scatter(component, t89_component, c=color_array,
+                             cmap='viridis', norm=color_norm)
+        ax.set_xlabel(f'{spacecraft_name} {label} Component')
+        ax.set_ylabel(f'T89 {label} Component')
+        ax.set_title(
+            f'{spacecraft_name} {label} Component vs T89 {label} Component')
+        cbar = fig.colorbar(color_cmap, ax=ax,
+                            ticks=np.linspace(0, 1, len(month_labels)),
+                            label='Month')
+        cbar.set_ticklabels(month_labels)  # Set tick labels as numeric months
+
+    # Show the plot
+    plt.tight_layout()
+
+    # Save the plot to the output file if provided
+    if output_file:
+        plt.savefig(output_file)
+
+    plt.show()
+
+
+def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
+                                    gk2a_mag_data, gk2a_sub_data,
+                                    gk2a_time_list, output_file=None):
+    fig, axs = plt.subplots(2, 2,
+                            figsize=(12, 12))  # Creates a 2x2 grid of subplots
+
+    # Convert timestamps to numeric values
+    g17_time_numeric = convert_timestamps_to_numeric(g17_time_list)
+    gk2a_time_numeric = convert_timestamps_to_numeric(gk2a_time_list)
+
+    # Create a Normalize object to map numeric timestamps to colors
+    g17_time_norm = Normalize(vmin=min(g17_time_numeric),
+                              vmax=max(g17_time_numeric))
+    gk2a_time_norm = Normalize(vmin=min(gk2a_time_numeric),
+                               vmax=max(gk2a_time_numeric))
+
+    # Create a ScalarMappable to generate a colorbar
+    g17_time_cmap = ScalarMappable(norm=g17_time_norm, cmap='viridis')
+    gk2a_time_cmap = ScalarMappable(norm=gk2a_time_norm, cmap='viridis')
+
+    # Scatter plot 1: subtr vs subtr with date-based color mapping for G17
+    axs[0, 0].scatter(g17_sub_data, gk2a_sub_data, c=g17_time_numeric,
+                      cmap='viridis', norm=g17_time_norm)
+    axs[0, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
+    axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 subtr')
+    axs[0, 0].set_title('G17 vs GK2A |B| T89 subtracted')
+    fig.colorbar(g17_time_cmap, ax=axs[0, 0],
+                 label='Date')  # Add colorbar for dates
+
+    # Scatter plot 2: mag vs mag with date-based color mapping for GK2A
+    axs[0, 1].scatter(g17_mag_data, gk2a_mag_data, c=gk2a_time_numeric,
+                      cmap='viridis', norm=gk2a_time_norm)
+    axs[0, 1].set_xlabel('G17 |B| (GSE)')
+    axs[0, 1].set_ylabel('GK2A |B| (GSE)')
+    axs[0, 1].set_title('G17 vs GK2A |B|')
+    fig.colorbar(gk2a_time_cmap, ax=axs[0, 1],
+                 label='Date')  # Add colorbar for dates
+
+    # Scatter plot 3: G17; mag vs subr with date-based color mapping for G17
+    axs[1, 0].scatter(g17_sub_data, g17_mag_data, c=g17_time_numeric,
+                      cmap='viridis', norm=g17_time_norm)
+    axs[1, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
+    axs[1, 0].set_ylabel('G17 |B| (GSE)')
+    axs[1, 0].set_title('G17; mag vs subr')
+    fig.colorbar(g17_time_cmap, ax=axs[1, 0],
+                 label='Date')  # Add colorbar for dates
+
+    # Scatter plot 4: GK2A; mag vs subr with date-based color mapping for GK2A
+    axs[1, 1].scatter(gk2a_sub_data, gk2a_mag_data, c=gk2a_time_numeric,
+                      cmap='viridis', norm=gk2a_time_norm)
+    axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 subtr')
+    axs[1, 1].set_ylabel('GK2A |B| (GSE)')
+    axs[1, 1].set_title('GK2A; mag vs subr')
+    fig.colorbar(gk2a_time_cmap, ax=axs[1, 1],
+                 label='Date')  # Add colorbar for dates
+
+    # Remove top and right borders from all panels
+    for ax in axs.flatten():
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+    # Save the plot to the output file if provided
+    if output_file:
+        plt.savefig(output_file)
+
+    # Show the plot (optional)
     plt.show()
