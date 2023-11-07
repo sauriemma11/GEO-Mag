@@ -1,6 +1,8 @@
 import numpy as np
 import datetime as dt
 
+import pandas as pd
+
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
     # Calculate the time difference for the input longitude
@@ -14,8 +16,95 @@ def calculate_time_difference(longitude_degrees, hemisphere='W'):
     return time_diff
 
 
+def unpack_components(data_list):
+    # Unpack x, y, and z components from a list of data points
+    x_component = [point[0] for point in data_list]
+    y_component = [point[1] for point in data_list]
+    z_component = [point[2] for point in data_list]
+    return x_component, y_component, z_component
+
+
+def calc_hourly_stddev(datetime_list, subtr_list, kp_mask=None):
+    """
+    Calculate hourly standard deviation of subtraction data with an optional
+    Kp mask.
+
+    Args:
+        datetime_list (list): List of datetime values.
+        subtr_list (list): List of subtraction data.
+        kp_mask (list, optional): List of boolean values indicating Kp
+        values over threshold.
+                                  If provided, only data points where
+                                  kp_mask is True will be used.
+
+    Returns:
+        pd.Series: Hourly standard deviation of subtraction data.
+    """
+    # Create a pandas DataFrame with datetime as the index
+    df = pd.DataFrame({'datetime': datetime_list, 'subtraction': subtr_list})
+    df.set_index('datetime', inplace=True)
+
+    # Apply the Kp mask if provided
+    if kp_mask is not None:
+        df['subtraction'] = df['subtraction'].mask(kp_mask)
+
+    # Resample the data to hourly frequency and calculate standard deviation
+    hourly_std_dev = df['subtraction'].resample('H').std()
+
+    return hourly_std_dev
+
+
+def calculate_std_dev(dataset1, dataset2):
+    # Convert to arrays, handling potential raggedness
+    array1 = np.array(dataset1, dtype=object) if isinstance(dataset1[0],
+                                                            list) else \
+        np.array(
+            dataset1)
+    array2 = np.array(dataset2, dtype=object) if isinstance(dataset2[0],
+                                                            list) else \
+        np.array(
+        dataset2)
+
+    # Calculate difference
+    # Ensure both arrays are the same length and shape
+    if array1.shape == array2.shape:
+        difference = array1 - array2
+        # Flatten the array to ensure np.nanstd can work on it
+        difference = np.hstack(difference.ravel())
+    else:
+        raise ValueError("The inputs must have the same shape.")
+
+    return np.nanstd(difference)
+
+
 def calculate_total_magnetic_field(x, y, z):
     return np.sqrt(x ** 2 + y ** 2 + z ** 2)
+
+
+def convert_timestamps_to_numeric(timestamps):
+    # Convert timestamps to numeric values (e.g., seconds since a reference
+    # date)
+    numeric_values = [(t - timestamps[0]).total_seconds() for t in timestamps]
+    return numeric_values
+
+def calc_line_of_best_fit(x, y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    mask = np.isfinite(x) & np.isfinite(
+        y)  # Ensure x and y are arrays and create the mask
+    x_masked = x[mask]
+    y_masked = y[mask]
+    coeff = np.polyfit(x_masked, y_masked, 1)
+    polynomial = np.poly1d(coeff)
+    return polynomial
+
+
+def get_avg_data_over_interval(time_list, data_list, interval='60T'):
+    df = pd.DataFrame({'time': time_list, 'data': data_list})
+    df.set_index('time', inplace=True)
+    df_resampled = df.resample(interval).mean()
+
+    return df_resampled.index.tolist(), df_resampled['data'].tolist()
 
 
 def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):
