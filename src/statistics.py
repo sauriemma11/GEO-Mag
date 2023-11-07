@@ -48,10 +48,26 @@ for filename in os.listdir(g17_pickle_dir):
         file_path = os.path.join(g17_pickle_dir, filename)
         time, ts89_gse, sat_gse = \
             data_loader.load_model_subtr_gse_from_pickle_file(
-            file_path)
+                file_path)
         g17_time_list.extend(time)
         g17_89_subtr_list.extend(ts89_gse)
         g17_data_list.extend(sat_gse)
+
+gk2a_time_list = [pd.to_datetime(time) for time in gk2a_time_list]
+g17_time_list = [pd.to_datetime(time) for time in g17_time_list]
+
+# Call the function to get the averaged lists
+gk2a_avg_time_list, gk2a_avg_data_list = utils.get_avg_data_over_interval(
+    gk2a_time_list, gk2a_data_list)
+g17_avg_time_list, g17_avg_data_list = utils.get_avg_data_over_interval(
+    g17_time_list, g17_data_list)
+
+# If you need the subtraction lists averaged as well
+gk2a_avg_subtr_time_list, gk2a_avg_subtr_list = \
+    utils.get_avg_data_over_interval(
+    gk2a_time_list, gk2a_89_subtr_list)
+g17_avg_subtr_time_list, g17_avg_subtr_list = utils.get_avg_data_over_interval(
+    g17_time_list, g17_89_subtr_list)
 
 # TODO: fix error handling
 if len(g17_data_list) == len(gk2a_data_list):
@@ -76,18 +92,15 @@ else:
 # g17_89_daa_array = np.array(filtered_g17_subtr_list)
 # g17_89_data_list = data_loader.process_goes_dataset(g17_89_data_array)
 
-stddev = utils.calculate_std_dev(g17_89_subtr_list, gk2a_89_subtr_list)
+stddev = utils.calculate_std_dev(g17_avg_subtr_list, gk2a_avg_subtr_list)
 print('stddev of the two sc with model subtracted: ', stddev)
-stddev = utils.calculate_std_dev(g17_data_list, gk2a_data_list)
+stddev = utils.calculate_std_dev(g17_avg_data_list, gk2a_avg_data_list)
 print('stddev of the two sc mag data: ', stddev)
-# stddev = utils.calculate_std_dev(filtered_g17_subtr_list,
-# filtered_gk2a_subtr_list)
-# print('stddev after kp filter: ', stddev)
 
 gk2a_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
-                                 for point in gk2a_89_subtr_list]
+                                 for point in gk2a_avg_subtr_list]
 g17_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
-                                for point in g17_89_subtr_list]
+                                for point in g17_avg_subtr_list]
 
 gk2a_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
                         in gk2a_data_list]

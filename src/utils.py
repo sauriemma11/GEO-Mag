@@ -1,6 +1,8 @@
 import numpy as np
 import datetime as dt
 
+import pandas as pd
+
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
     # Calculate the time difference for the input longitude
@@ -15,7 +17,25 @@ def calculate_time_difference(longitude_degrees, hemisphere='W'):
 
 
 def calculate_std_dev(dataset1, dataset2):
-    difference = np.array(dataset1) - np.array(dataset2)
+    # Convert to arrays, handling potential raggedness
+    array1 = np.array(dataset1, dtype=object) if isinstance(dataset1[0],
+                                                            list) else \
+        np.array(
+        dataset1)
+    array2 = np.array(dataset2, dtype=object) if isinstance(dataset2[0],
+                                                            list) else \
+        np.array(
+        dataset2)
+
+    # Calculate difference
+    # Ensure both arrays are the same length and shape
+    if array1.shape == array2.shape:
+        difference = array1 - array2
+        # Flatten the array to ensure np.nanstd can work on it
+        difference = np.hstack(difference.ravel())
+    else:
+        raise ValueError("The inputs must have the same shape.")
+
     return np.nanstd(difference)
 
 
@@ -33,6 +53,14 @@ def calc_line_of_best_fit(x, y):
     coeff = np.polyfit(x_masked, y_masked, 1)
     polynomial = np.poly1d(coeff)
     return polynomial
+
+
+def get_avg_data_over_interval(time_list, data_list, interval='60T'):
+    df = pd.DataFrame({'time': time_list, 'data': data_list})
+    df.set_index('time', inplace=True)
+    df_resampled = df.resample(interval).mean()
+
+    return df_resampled.index.tolist(), df_resampled['data'].tolist()
 
 
 def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):
