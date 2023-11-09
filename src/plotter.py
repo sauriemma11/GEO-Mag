@@ -169,12 +169,15 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
     fig, (ax1) = plt.subplots()
 
     if goes17_data is not None:
-        goes17_theta = calculate_magnetic_inclination_angle_VDH(goes17_data[:, 0],goes17_data[:, 1],goes17_data[:, 2])
+        goes17_theta = calculate_magnetic_inclination_angle_VDH(
+            goes17_data[:, 0], goes17_data[:, 1], goes17_data[:, 2])
         ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red')
 
     if goes18_data is not None:
-        goes18_theta = calculate_magnetic_inclination_angle_VDH(goes18_data[:, 0],goes18_data[:, 1],goes18_data[:, 2])
-        ax1.plot(goes_time, np.degrees(goes18_theta), label='G18', color='orange')
+        goes18_theta = calculate_magnetic_inclination_angle_VDH(
+            goes18_data[:, 0], goes18_data[:, 1], goes18_data[:, 2])
+        ax1.plot(goes_time, np.degrees(goes18_theta), label='G18',
+                 color='orange')
 
     if gk2a_data is not None:
         gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
@@ -493,13 +496,14 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
 
 def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
                                     gk2a_mag_data, gk2a_sub_data,
-                                    gk2a_time_list, output_file=None):
+                                    gk2a_time_list, output_file=None,
+                                    best_fit=False):
     fig, axs = plt.subplots(2, 2,
                             figsize=(12, 12))  # Creates a 2x2 grid of subplots
 
     # Convert timestamps to numeric values
-    g17_time_numeric = convert_timestamps_to_numeric(g17_time_list)
-    gk2a_time_numeric = convert_timestamps_to_numeric(gk2a_time_list)
+    g17_time_numeric = mdates.date2num(g17_time_list)
+    gk2a_time_numeric = mdates.date2num(gk2a_time_list)
 
     # Create a Normalize object to map numeric timestamps to colors
     g17_time_norm = Normalize(vmin=min(g17_time_numeric),
@@ -507,45 +511,64 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     gk2a_time_norm = Normalize(vmin=min(gk2a_time_numeric),
                                vmax=max(gk2a_time_numeric))
 
+    # colormap
+    cmap = 'viridis'
+
     # Create a ScalarMappable to generate a colorbar
-    g17_time_cmap = ScalarMappable(norm=g17_time_norm, cmap='viridis')
-    gk2a_time_cmap = ScalarMappable(norm=gk2a_time_norm, cmap='viridis')
+    g17_time_cmap = ScalarMappable(norm=g17_time_norm, cmap=cmap)
+    gk2a_time_cmap = ScalarMappable(norm=gk2a_time_norm, cmap=cmap)
 
     # Scatter plot 1: subtr vs subtr with date-based color mapping for G17
-    axs[0, 0].scatter(g17_sub_data, gk2a_sub_data, c=g17_time_numeric,
+    x, y = g17_sub_data, gk2a_sub_data
+    axs[0, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     axs[0, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
     axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 subtr')
-    axs[0, 0].set_title('G17 vs GK2A |B| T89 subtracted')
-    fig.colorbar(g17_time_cmap, ax=axs[0, 0],
-                 label='Date')  # Add colorbar for dates
+    # axs[0, 0].set_title('G17 vs GK2A |B| T89 subtracted')
+    fig.colorbar(g17_time_cmap, ax=axs[0, 0], format=DateFormatter(
+        '%m'), label='Date')
+    if best_fit:
+        polynomial = calc_line_of_best_fit(x, y)
+        axs[0, 0].plot(x, polynomial(x), color='red')
 
     # Scatter plot 2: mag vs mag with date-based color mapping for GK2A
-    axs[0, 1].scatter(g17_mag_data, gk2a_mag_data, c=gk2a_time_numeric,
+    x, y = g17_mag_data, gk2a_mag_data
+    axs[0, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
     axs[0, 1].set_xlabel('G17 |B| (GSE)')
     axs[0, 1].set_ylabel('GK2A |B| (GSE)')
-    axs[0, 1].set_title('G17 vs GK2A |B|')
-    fig.colorbar(gk2a_time_cmap, ax=axs[0, 1],
+    # axs[0, 1].set_title('G17 vs GK2A |B|')
+    fig.colorbar(gk2a_time_cmap, ax=axs[0, 1], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
+    if best_fit:
+        polynomial = calc_line_of_best_fit(x, y)
+        axs[0, 1].plot(x, polynomial(x), color='red')
 
     # Scatter plot 3: G17; mag vs subr with date-based color mapping for G17
-    axs[1, 0].scatter(g17_sub_data, g17_mag_data, c=g17_time_numeric,
+    x, y = g17_sub_data, g17_mag_data
+    axs[1, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     axs[1, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
     axs[1, 0].set_ylabel('G17 |B| (GSE)')
-    axs[1, 0].set_title('G17; mag vs subr')
-    fig.colorbar(g17_time_cmap, ax=axs[1, 0],
+    # axs[1, 0].set_title('G17; mag vs subr')
+    fig.colorbar(g17_time_cmap, ax=axs[1, 0], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
+    if best_fit:
+        polynomial = calc_line_of_best_fit(x, y)
+        axs[1, 0].plot(x, polynomial(x), color='red')
 
     # Scatter plot 4: GK2A; mag vs subr with date-based color mapping for GK2A
-    axs[1, 1].scatter(gk2a_sub_data, gk2a_mag_data, c=gk2a_time_numeric,
+    x, y = gk2a_sub_data, gk2a_mag_data
+    axs[1, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
     axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 subtr')
     axs[1, 1].set_ylabel('GK2A |B| (GSE)')
-    axs[1, 1].set_title('GK2A; mag vs subr')
-    fig.colorbar(gk2a_time_cmap, ax=axs[1, 1],
+    # axs[1, 1].set_title('GK2A; mag vs subr')
+    fig.colorbar(gk2a_time_cmap, ax=axs[1, 1], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
+    if best_fit:
+        polynomial = calc_line_of_best_fit(x, y)
+        axs[1, 1].plot(x, polynomial(x), color='red')
 
     # Remove top and right borders from all panels
     for ax in axs.flatten():

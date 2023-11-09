@@ -84,7 +84,28 @@ gk2a_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
 g17_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
                        in g17_data_list]
 
+aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list, gk2a_time_list,
+                                                 g17_total_mag_field_modelsub,
+                                                 gk2a_total_mag_field_modelsub)
+mean_difference_sub, standard_deviation_sub = utils.mean_and_std_dev(
+    aligned_gk2a,
+    aligned_g17)
 
+aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list, gk2a_time_list,
+                                                 g17_total_mag_field,
+                                                 gk2a_total_mag_field)
+mean_difference_mag, standard_deviation_mag = utils.mean_and_std_dev(
+    aligned_gk2a,
+    aligned_g17)
+
+print('|B| (GSE) subtraction data')
+print(f'Mean Difference: {mean_difference_sub} nT')
+print(f'Standard Deviation: {standard_deviation_sub} nT')
+print('---------------')
+print('|B| (GSE)')
+print(f'Mean Difference: {mean_difference_mag} nT')
+print(f'Standard Deviation: {standard_deviation_mag} nT')
+print('---------------')
 
 # plt.plot(gk2a_time_list, gk2a_total_mag_field_modelsub,
 #          label='gk2a t89 removed')
@@ -100,12 +121,29 @@ g17_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
 # plt.title('G17 |B|')
 # plt.show()
 
-# plotter.plot_components_vs_t89('GK2A', gk2a_data_list, gk2a_89_subtr_list)
-# plotter.plot_components_vs_t89_with_color('GK2A', gk2a_data_list,
-# gk2a_89_subtr_list, gk2a_time_list)
-
 
 # plotter.plot_components_vs_t89_with_color('G17', g17_data_list,
 #                                           g17_89_subtr_list, g17_time_list)
-plotter.plot_components_vs_t89_with_color('GK2A', gk2a_data_list,
-                                          gk2a_89_subtr_list, gk2a_time_list)
+# plotter.plot_components_vs_t89_with_color('GK2A', gk2a_data_list,
+#                                           gk2a_89_subtr_list, gk2a_time_list)
+
+
+# plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
+# g17_total_mag_field_modelsub, g17_time_list, gk2a_total_mag_field,
+# gk2a_total_mag_field_modelsub, gk2a_time_list, output_file=None,
+# best_fit=True)
+
+
+# Use the function to calculate stats
+# hourly_stats = utils.calc_stats(gk2a_time_list,
+# gk2a_total_mag_field_modelsub, g17_total_mag_field_modelsub)
+# hourly_stats = utils.calc_stats(gk2a_time_list,
+# gk2a_total_mag_field_modelsub, g17_total_mag_field_modelsub, 'H')
+# print(hourly_stats)
+
+
+# To produce a table suitable for a scientific journal, you would likely do
+# further formatting:
+# table_for_journal = hourly_stats.style.format("{:.2f}").set_table_styles(
+#     [{"selector": "th", "props": [("font-size", "10pt")]}]
+# )

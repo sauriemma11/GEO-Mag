@@ -1,6 +1,6 @@
 import numpy as np
 import datetime as dt
-
+from typing import List, Tuple
 import pandas as pd
 
 
@@ -53,6 +53,34 @@ def calc_hourly_stddev(datetime_list, subtr_list, kp_mask=None):
 
     return hourly_std_dev
 
+
+def align_datasets(time_list_1: List, time_list_2: List,
+                   data_1: List[float], data_2: List[float]) -> Tuple[
+    np.ndarray, np.ndarray]:
+    """
+    Align two datasets based on their timestamps and return the paired data.
+
+    :param time_list_1: Timestamps of the first dataset.
+    :param time_list_2: Timestamps of the second dataset.
+    :param data_1: Data points of the first dataset.
+    :param data_2: Data points of the second dataset.
+    :return: Tuple of numpy arrays with aligned data from both datasets.
+    """
+    # Assuming the timestamps are already datetime objects and the lists are
+    # sorted
+    # Create a dictionary from time_list_2 to its corresponding data for
+    # quick lookup
+    data_dict_2 = {time: data for time, data in zip(time_list_2, data_2)}
+
+    # Align the datasets
+    aligned_data_1 = []
+    aligned_data_2 = []
+    for time, data in zip(time_list_1, data_1):
+        if time in data_dict_2:
+            aligned_data_1.append(data)
+            aligned_data_2.append(data_dict_2[time])
+
+    return np.array(aligned_data_1), np.array(aligned_data_2)
 
 def calculate_std_dev(dataset1, dataset2):
     # Convert to arrays, handling potential raggedness
