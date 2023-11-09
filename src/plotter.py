@@ -570,7 +570,7 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     if is_model_subtr:
         axs[1, 1].set_xlabel('GK2A |B| with T89 model removed')
     else:
-        axs[1, 1].set_xlabel('GK2A |B| T89 model')
+        axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 model')
     axs[1, 1].set_ylabel('GK2A |B| (GSE) observed')
     # axs[1, 1].set_title('GK2A; mag vs subr')
     fig.colorbar(gk2a_time_cmap, ax=axs[1, 1], format=DateFormatter('%m'),
@@ -579,22 +579,16 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
         polynomial = calc_line_of_best_fit(x, y)
         axs[1, 1].plot(x, polynomial(x), color='red')
 
-    # fix limits of x and y axis:
-    # x_limits = (min(min(g17_mag_data), min(gk2a_mag_data)),
-    #             max(max(g17_mag_data), max(gk2a_mag_data)))
-    # y_limits = (min(min(g17_sub_data), min(gk2a_sub_data)),
-    #             max(max(g17_sub_data), max(gk2a_sub_data)))
-
-    # or set manually:
-    x_limits = (0, 200)
-    y_limits = (0, 200)
+    # TODO: Fix axes limits
+    # axs[1,0].set_xlim(75,130)
+    # axs[1,0].set_ylim(25,175)
+    # axs[1,1].set_xlim(75,130)
+    # axs[1,1].set_ylim(25,175)
 
     # Remove top and right borders from all panels, apply x y axes limits
     for ax in axs.flatten():
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.set_xlim(x_limits)
-        ax.set_ylim(y_limits)
 
     # Save the plot to the output file if provided
     if output_file:

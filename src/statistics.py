@@ -142,12 +142,10 @@ print('---------------')
 #                                           gk2a_89_subtr_list, gk2a_time_list)
 
 
-plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
-                                        g17_total_mag_field_model,
-                                        g17_time_list, gk2a_total_mag_field,
-                                        gk2a_total_mag_field_model,
-                                        gk2a_time_list, output_file=None,
-                                        best_fit=True, is_model_subtr=False)
+plotter.plot_4_scatter_plots_with_color(
+    g17_total_mag_field, g17_total_mag_field_model, g17_time_list,
+    gk2a_total_mag_field, gk2a_total_mag_field_model, gk2a_time_list,
+    output_file=None, best_fit=True, is_model_subtr=False)
 
 # plotter.plot_4_scatter_plots_with_color(
 #     g17_total_mag_field, g17_total_mag_field_modelsub, g17_time_list,
@@ -155,6 +153,16 @@ plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
 #     gk2a_total_mag_field_modelsub, gk2a_time_list, output_file=None,
 #     best_fit=True, is_model_subtr=True)
 
+
+mean_difference_subtrvssubtr, standard_deviation_subtrvssubtr = \
+    utils.mean_and_std_dev(
+        g17_total_mag_field_modelsub, gk2a_total_mag_field_modelsub)
+
+print('(g17 - T89 model) vs (gk2a - T89 model)')
+print('top left plot')
+print(f'Mean Difference: {mean_difference_subtrvssubtr} nT')
+print(f'Standard Deviation: {standard_deviation_subtrvssubtr} nT')
+print('---------------')
 
 # Use the function to calculate stats
 # hourly_stats = utils.calc_stats(gk2a_time_list,
