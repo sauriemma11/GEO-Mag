@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 from cdasws import CdasWs
+import re
 import datetime
 import kp_data_processing as kp
 
@@ -25,12 +26,14 @@ def load_and_trim_data(pickle_dir, start_date, end_date):
         inclusive).
 
     Returns:
-        tuple: A tuple containing three lists: (time_list, data_list,
-        subtr_list).
+        tuple: A tuple containing four lists: (time_list, data_list,
+        model_list, subtr_list).
             - time_list (list of datetime): List of datetime objects
             representing timestamps (sorted).
-            - data_list (list): List of data points corresponding to each
-            timestamp (sorted).
+            - data_list (list): List of satellite position data points
+            corresponding to each timestamp (sorted).
+            - model_list (list): List of model data points corresponding to
+            each timestamp (sorted).
             - subtr_list (list): List of subtracted data points
             corresponding to each timestamp (sorted).
 
@@ -39,6 +42,9 @@ def load_and_trim_data(pickle_dir, start_date, end_date):
         directory, filters it
         based on the desired date range, and sorts all lists based on the
         time_list.
+        The function assumes that the pickle files contain the following keys:
+        'time_min', 'sat_gse', 'tsXX_gse', 'tsXX-sat', where 'XX' is a
+        placeholder for the model identifier (e.g., '89' or '04').
 
     Example:
         To load and filter data from a directory 'data_dir' for the date
@@ -47,18 +53,19 @@ def load_and_trim_data(pickle_dir, start_date, end_date):
 
         start_date = datetime.datetime(2022, 4, 1)
         end_date = datetime.datetime(2022, 9, 30)
-        time_list, data_list, subtr_list = load_and_trim_data('data_dir',
-        start_date, end_date)
-
+        time_list, data_list, model_list, subtr_list = load_and_trim_data(
+        'data_dir', start_date, end_date)
     """
     time_list = []
     data_list = []
+    model_list = []
     subtr_list = []
 
     for filename in os.listdir(pickle_dir):
         if filename.endswith('.pickle'):
             file_path = os.path.join(pickle_dir, filename)
-            time, ts89_gse, sat_gse = load_model_subtr_gse_from_pickle_file(
+            time, model_gse, sat_gse, subtr_data = \
+                load_model_subtr_gse_from_pickle_file(
                 file_path)
 
             # Convert time to datetime objects
@@ -67,25 +74,33 @@ def load_and_trim_data(pickle_dir, start_date, end_date):
             # Filter data based on the desired date range
             filtered_time = []
             filtered_data = []
+            filtered_model = []
             filtered_subtr = []
-            for t, data, subtr in zip(time, sat_gse, ts89_gse):
+
+            for t, data, model, subtr in zip(time, sat_gse, model_gse,
+                                             subtr_data):
                 if start_date <= t <= end_date:
                     filtered_time.append(t)
                     filtered_data.append(data)
+                    filtered_model.append(model)
                     filtered_subtr.append(subtr)
 
             # Extend the lists with filtered data
             time_list.extend(filtered_time)
             data_list.extend(filtered_data)
+            model_list.extend(filtered_model)
             subtr_list.extend(filtered_subtr)
 
     # Sort all lists based on the time_list
     sorted_indices = sorted(range(len(time_list)), key=lambda i: time_list[i])
     time_list = [time_list[i] for i in sorted_indices]
     data_list = [data_list[i] for i in sorted_indices]
+    model_list = [model_list[i] for i in sorted_indices]
     subtr_list = [subtr_list[i] for i in sorted_indices]
 
-    return time_list, data_list, subtr_list
+    return time_list, data_list, model_list, subtr_list
+
+
 def load_subtr_data(file_path):
     """
     Load subtraction data from a pickle file.
@@ -147,19 +162,42 @@ def fix_nan_for_goes(data, nanvalue=-9998.0):
 
 def load_model_subtr_gse_from_pickle_file(file_path):
     """
-    Load a python pickle file and return its data
+    Load a Python pickle file and return data for model and subtracted
+    satellite data.
 
-    :param file_path: path to pickle file to load
-    :return: Loaded data from pickle file
+    The function dynamically determines the key for the model data by
+    searching for a pattern.
+
+    :param file_path: Path to the pickle file to load.
+    :return: Tuple with time, model data, satellite position, and subtracted
+    data.
     """
     with open(file_path, 'rb') as file:
         data = pickle.load(file)
-        # print(data.keys())
-        time = data['time_min']
-        ts89_gse = data['ts89-sat']
-        sat_gse = data['sat_gse']
-    return time, ts89_gse, sat_gse
+        # print(f"KEYS: {data.keys()}")
 
+        time = data.get('time_min', None)
+        sat_gse = data.get('sat_gse', None)
+
+        # Detect the pattern for the model data and construct the keys
+        model_key_pattern = re.compile(r'ts\d+_gse')
+        subtr_key_pattern = re.compile(r'ts\d+-sat')
+
+        model_key = next(
+            (key for key in data.keys() if model_key_pattern.match(key)), None)
+        subtr_key = next(
+            (key for key in data.keys() if subtr_key_pattern.match(key)), None)
+
+        if model_key is None or subtr_key is None:
+            raise KeyError("Model or subtracted satellite data key not found.")
+
+        model_data = data.get(model_key)
+        subtr_data = data.get(subtr_key)
+
+        if model_data is None or subtr_data is None:
+            raise ValueError("Model or subtracted satellite data not found.")
+
+    return time, model_data, sat_gse, subtr_data
 
 # sos_pickle = 'Z:/Data/GK2A/model_outputs/sosmag_modout_892019-04-01.pickle'
 # sos_data = load_pickle_file(sos_pickle)

@@ -159,3 +159,27 @@ def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):
 
 # print(find_noon_and_midnight_time(calculate_time_difference(128.2),
 # '2022-08-15', gk2a=True))
+
+def mean_and_std_dev(data_1, data_2):
+    """
+    Calculate the mean difference and the standard deviation of the differences
+    between two datasets while ignoring NaN values.
+
+    :param data_1: Data points of the first dataset.
+    :param data_2: Data points of the second dataset.
+    :return: A tuple containing the mean difference and the standard deviation.
+    """
+    # Convert lists to numpy arrays if they are not already
+    if isinstance(data_1, list):
+        data_1 = np.array(data_1, dtype=np.float64)
+    if isinstance(data_2, list):
+        data_2 = np.array(data_2, dtype=np.float64)
+
+    # Perform the subtraction
+    differences = data_1 - data_2
+
+    # Calculate mean and standard deviation, ignoring NaN values
+    mean_diff = np.nanmean(differences)
+    std_dev = np.nanstd(differences)
+
+    return mean_diff, std_dev
