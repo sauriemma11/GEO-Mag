@@ -10,6 +10,12 @@ import argparse
 # TODO: plot sc orbit locations
 
 def main():
+    # picklefile = 'Z:/Data/GK2A/model_outputs/202208/sosmag_modout_OMNI2022
+    # -08-04.pickle'
+    # with open(picklefile, 'rb') as file:
+    #     data = pickle.load(file)
+    # print(data.keys())
+
     parser = argparse.ArgumentParser()
 
     # all spacecraft data is optional, and at least one is required.
@@ -107,6 +113,7 @@ def main():
     # print(gk2a_noon, gk2a_midnight, g17_noon, g17_midnight, g18_noon,
     # g18_midnight)
     # print(noonmidnighttimes_dict)
+
 
 if __name__ == "__main__":
     main()

@@ -21,12 +21,12 @@ start_date = pd.to_datetime('2019-04-01')
 end_date = pd.to_datetime('2019-09-30')
 
 # Load and trim GK2A data
-gk2a_time_list, gk2a_data_list, gk2a_89_subtr_list = \
+gk2a_time_list, gk2a_data_list, gk2a_89_model_list, gk2a_89_subtr_list = \
     data_loader.load_and_trim_data(
     sosmag_pickle_dir, start_date, end_date)
 
 # Load and trim GOES-17 data
-g17_time_list, g17_data_list, g17_89_subtr_list = \
+g17_time_list, g17_data_list, g17_89_model_list, g17_89_subtr_list = \
     data_loader.load_and_trim_data(
     g17_pickle_dir, start_date, end_date)
 
@@ -74,6 +74,11 @@ else:
 # print(len(g17_data_list))
 
 # Get |B| from data using utils
+gk2a_total_mag_field_model = [utils.calculate_total_magnetic_field(*point)
+                              for point in gk2a_89_model_list]
+g17_total_mag_field_model = [utils.calculate_total_magnetic_field(*point)
+                             for point in g17_89_model_list]
+
 gk2a_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
                                  for point in gk2a_89_subtr_list]
 g17_total_mag_field_modelsub = [utils.calculate_total_magnetic_field(*point)
@@ -84,27 +89,36 @@ gk2a_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
 g17_total_mag_field = [utils.calculate_total_magnetic_field(*point) for point
                        in g17_data_list]
 
-aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list, gk2a_time_list,
-                                                 g17_total_mag_field_modelsub,
-                                                 gk2a_total_mag_field_modelsub)
-mean_difference_sub, standard_deviation_sub = utils.mean_and_std_dev(
-    aligned_gk2a,
-    aligned_g17)
+# aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list,
+# gk2a_time_list,
+#                                                  g17_total_mag_field_modelsub,
+#                                                  gk2a_total_mag_field_modelsub)
 
-aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list, gk2a_time_list,
-                                                 g17_total_mag_field,
-                                                 gk2a_total_mag_field)
-mean_difference_mag, standard_deviation_mag = utils.mean_and_std_dev(
-    aligned_gk2a,
-    aligned_g17)
+# mean_difference_sub, standard_deviation_sub = utils.mean_and_std_dev(
+#     aligned_gk2a,
+#     aligned_g17)
 
-print('|B| (GSE) subtraction data')
-print(f'Mean Difference: {mean_difference_sub} nT')
-print(f'Standard Deviation: {standard_deviation_sub} nT')
+# aligned_g17, aligned_gk2a = utils.align_datasets(g17_time_list,
+# gk2a_time_list,
+#                                                  g17_total_mag_field,
+#                                                  gk2a_total_mag_field)
+
+mean_difference_g17_obsvsmodel, standard_deviation_g17_obsvsmodel = \
+    utils.mean_and_std_dev(
+    g17_total_mag_field_model, g17_total_mag_field)
+mean_difference_gk2a_obsvsmodel, standard_deviation_gk2a_obsvsmodel = \
+    utils.mean_and_std_dev(
+    gk2a_total_mag_field_model, gk2a_total_mag_field)
+
+print('g17 |B| (GSE) obsv vs TS89 model')
+print('bottom left sub plot')
+print(f'Mean Difference: {mean_difference_g17_obsvsmodel} nT')
+print(f'Standard Deviation: {standard_deviation_g17_obsvsmodel} nT')
 print('---------------')
-print('|B| (GSE)')
-print(f'Mean Difference: {mean_difference_mag} nT')
-print(f'Standard Deviation: {standard_deviation_mag} nT')
+print('gk2a |B| (GSE) obsv vs TS89 model')
+print('bottom right sub plot')
+print(f'Mean Difference: {mean_difference_gk2a_obsvsmodel} nT')
+print(f'Standard Deviation: {standard_deviation_gk2a_obsvsmodel} nT')
 print('---------------')
 
 # plt.plot(gk2a_time_list, gk2a_total_mag_field_modelsub,
@@ -128,10 +142,18 @@ print('---------------')
 #                                           gk2a_89_subtr_list, gk2a_time_list)
 
 
-# plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
-# g17_total_mag_field_modelsub, g17_time_list, gk2a_total_mag_field,
-# gk2a_total_mag_field_modelsub, gk2a_time_list, output_file=None,
-# best_fit=True)
+plotter.plot_4_scatter_plots_with_color(g17_total_mag_field,
+                                        g17_total_mag_field_model,
+                                        g17_time_list, gk2a_total_mag_field,
+                                        gk2a_total_mag_field_model,
+                                        gk2a_time_list, output_file=None,
+                                        best_fit=True, is_model_subtr=False)
+
+# plotter.plot_4_scatter_plots_with_color(
+#     g17_total_mag_field, g17_total_mag_field_modelsub, g17_time_list,
+#     gk2a_total_mag_field,
+#     gk2a_total_mag_field_modelsub, gk2a_time_list, output_file=None,
+#     best_fit=True, is_model_subtr=True)
 
 
 # Use the function to calculate stats

@@ -497,7 +497,7 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
 def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
                                     gk2a_mag_data, gk2a_sub_data,
                                     gk2a_time_list, output_file=None,
-                                    best_fit=False):
+                                    best_fit=False, is_model_subtr=False):
     fig, axs = plt.subplots(2, 2,
                             figsize=(12, 12))  # Creates a 2x2 grid of subplots
 
@@ -522,9 +522,12 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     x, y = g17_sub_data, gk2a_sub_data
     axs[0, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
-    axs[0, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
-    axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 subtr')
-    # axs[0, 0].set_title('G17 vs GK2A |B| T89 subtracted')
+    if is_model_subtr:
+        axs[0, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
+        axs[0, 0].set_ylabel('GK2A |B| (GSE) with T89 model removed')
+    else:
+        axs[0, 0].set_xlabel('G17 |B| (GSE) T89 model')
+        axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 model')
     fig.colorbar(g17_time_cmap, ax=axs[0, 0], format=DateFormatter(
         '%m'), label='Date')
     if best_fit:
@@ -535,8 +538,8 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     x, y = g17_mag_data, gk2a_mag_data
     axs[0, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
-    axs[0, 1].set_xlabel('G17 |B| (GSE)')
-    axs[0, 1].set_ylabel('GK2A |B| (GSE)')
+    axs[0, 1].set_xlabel('G17 |B| (GSE) observed')
+    axs[0, 1].set_ylabel('GK2A |B| (GSE) observed')
     # axs[0, 1].set_title('G17 vs GK2A |B|')
     fig.colorbar(gk2a_time_cmap, ax=axs[0, 1], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
@@ -548,8 +551,11 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     x, y = g17_sub_data, g17_mag_data
     axs[1, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
-    axs[1, 0].set_xlabel('G17 |B| (GSE) T89 subtr')
-    axs[1, 0].set_ylabel('G17 |B| (GSE)')
+    if is_model_subtr:
+        axs[1, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
+    else:
+        axs[1, 0].set_xlabel('G17 |B| (GSE) T89 model')
+    axs[1, 0].set_ylabel('G17 |B| (GSE) observed')
     # axs[1, 0].set_title('G17; mag vs subr')
     fig.colorbar(g17_time_cmap, ax=axs[1, 0], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
@@ -561,8 +567,11 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     x, y = gk2a_sub_data, gk2a_mag_data
     axs[1, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
-    axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 subtr')
-    axs[1, 1].set_ylabel('GK2A |B| (GSE)')
+    if is_model_subtr:
+        axs[1, 1].set_xlabel('GK2A |B| with T89 model removed')
+    else:
+        axs[1, 1].set_xlabel('GK2A |B| T89 model')
+    axs[1, 1].set_ylabel('GK2A |B| (GSE) observed')
     # axs[1, 1].set_title('GK2A; mag vs subr')
     fig.colorbar(gk2a_time_cmap, ax=axs[1, 1], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
@@ -570,10 +579,22 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
         polynomial = calc_line_of_best_fit(x, y)
         axs[1, 1].plot(x, polynomial(x), color='red')
 
-    # Remove top and right borders from all panels
+    # fix limits of x and y axis:
+    # x_limits = (min(min(g17_mag_data), min(gk2a_mag_data)),
+    #             max(max(g17_mag_data), max(gk2a_mag_data)))
+    # y_limits = (min(min(g17_sub_data), min(gk2a_sub_data)),
+    #             max(max(g17_sub_data), max(gk2a_sub_data)))
+
+    # or set manually:
+    x_limits = (0, 200)
+    y_limits = (0, 200)
+
+    # Remove top and right borders from all panels, apply x y axes limits
     for ax in axs.flatten():
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
+        ax.set_xlim(x_limits)
+        ax.set_ylim(y_limits)
 
     # Save the plot to the output file if provided
     if output_file:
