@@ -147,3 +147,6 @@ print('---------------')
 # table_for_journal = hourly_stats.style.format("{:.2f}").set_table_styles(
 #     [{"selector": "th", "props": [("font-size", "10pt")]}]
 # )
+
+
+# TODO: add if __name__ == '__main__' to avoid running on import
