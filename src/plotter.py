@@ -1,8 +1,11 @@
+import netCDF4 as nc
+
 import utils
 from coord_transform import *
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
+import data_loader
 from utils import *
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
@@ -20,7 +23,7 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
                              goes18_spacecraft_data=None, whatsc_goes17=None,
                              whatsc_goes18=None, whatsc_gk2a=None,
                              gk2a_spacecraft_data=None, date_str=None,
-                             save_path=None, noonmidnighttime_dict=None):
+                             save_path=False, noonmidnighttime_dict=None):
     """
     Plot the B_GSE data from multiple spacecraft on top of each other.
     ** Note: All 3 spacecraft are optional, but at least one must be provided.
@@ -34,7 +37,8 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
     :param whatsc_gk2a: A label for the third spacecraft (optional).
     :param gk2a_spacecraft_data: Data for the third spacecraft (optional).
     :param date_str: A string representing the date (e.g., "YYYY-MM-DD").
-    :param save_path: The file path to save the generated plot (optional).
+    :param save_path: bool, if True, will save fig in current dir (
+    default=False).
 
     Example:
     plot_BGSE_fromdata_ontop(goes17_spacecraft_data, goes18_spacecraft_data,
@@ -46,6 +50,8 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
 
     if date_str is not None:
         ax1.set_title(f'B Field $GSE$, {date_str}')
+    else:
+        ax1.set_title(f'B Field $GSE$')
 
     if goes17_spacecraft_data is not None and whatsc_goes17 is not None:
         ax1.plot(goes_time, goes17_spacecraft_data[:, 0],
@@ -54,7 +60,7 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
                  label=f'{whatsc_goes17} ', color='red')
         ax3.plot(goes_time, goes17_spacecraft_data[:, 2],
                  label=f'{whatsc_goes17} ', color='red')
-
+        print('LEN: ', len(goes_time))
     if goes18_spacecraft_data is not None and whatsc_goes18 is not None:
         ax1.plot(goes_time, goes18_spacecraft_data[:, 0],
                  label=f'{whatsc_goes18} ', color='orange')
@@ -127,24 +133,33 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
     ax2.set_ylabel('$B_y$ [nT]')
     ax3.set_ylabel('$B_z$ [nT]')
 
-    ax3.set_xlabel('Time [h]')
-
     ax1.set_xticklabels([])
     ax2.set_xticklabels([])
+
     # Only show 3rd panel x axis labels:
-    ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    if len(goes_time) == 1440:
+        ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+        ax3.set_xlabel('Time [h]')
+
+    elif len(goes_time) > 1441:
+        ax3.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%d'))
+        ax3.set_xlabel('Time [d]')
+
+    ax1.set_ylim(-20, 90)
+    ax2.set_ylim(-70, 20)
+    ax3.set_ylim(10, 150)
 
     plt.tight_layout()
     # TODO: Fix save file, it is not working currently.
     if save_path:
-        save_file_as = f'BGSE_{date_str}'
-        plt.savefig(f"{save_path}/{save_file_as}.png")
+        save_file_as = 'B_gse_3comp.png'
+        plt.savefig(save_file_as)
         print(f'fig saved as {save_file_as}')
         plt.show()
     else:
         plt.show()
-
 
 def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
                                             goes17_data=None, goes18_data=None,
@@ -445,6 +460,7 @@ def plot_sc_vs_sc_scatter(x, y, x_label='X-axis', y_label='Y-axis',
 
 def plot_components_vs_t89_with_color(spacecraft_name, data_list,
                                       t89_data_list, timestamps,
+                                      model_str='TSXX',
                                       output_file=None):
     # Unpack x, y, and z components from the data and T89 data
     x_component, y_component, z_component = unpack_components(data_list)
@@ -478,9 +494,10 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
         scatter = ax.scatter(component, t89_component, c=numeric_timestamps,
                              cmap='viridis', norm=color_norm)
         ax.set_xlabel(f'{spacecraft_name} {label} Component')
-        ax.set_ylabel(f'T89 {label} Component')
+        ax.set_ylabel(f'{model_str} {label} Component')
         ax.set_title(
-            f'{spacecraft_name} {label} Component vs T89 {label} Component')
+            f'{spacecraft_name} {label} Component vs {model_str} {label} '
+            f'Component')
         fig.colorbar(scatter, ax=ax, format=DateFormatter('%m-%d'),
                      label='Date')
 
@@ -496,7 +513,8 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
 
 def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
                                     gk2a_mag_data, gk2a_sub_data,
-                                    gk2a_time_list, output_file=None,
+                                    gk2a_time_list, model_used='TSXX',
+                                    output_file=None,
                                     best_fit=False, is_model_subtr=False):
     fig, axs = plt.subplots(2, 2,
                             figsize=(12, 12))  # Creates a 2x2 grid of subplots
@@ -523,11 +541,12 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     axs[0, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     if is_model_subtr:
-        axs[0, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
-        axs[0, 0].set_ylabel('GK2A |B| (GSE) with T89 model removed')
+        axs[0, 0].set_xlabel(f'G17 |B| (GSE) with {model_used} model removed')
+        axs[0, 0].set_ylabel(f'GK2A |B| (GSE) with {model_used} model removed')
+
     else:
-        axs[0, 0].set_xlabel('G17 |B| (GSE) T89 model')
-        axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 model')
+        axs[0, 0].set_xlabel(f'G17 |B| (GSE) {model_used} model')
+        axs[0, 0].set_ylabel(f'GK2A |B| (GSE) {model_used} model')
     fig.colorbar(g17_time_cmap, ax=axs[0, 0], format=DateFormatter(
         '%m'), label='Date')
     if best_fit:
@@ -552,9 +571,9 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     axs[1, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     if is_model_subtr:
-        axs[1, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
+        axs[1, 0].set_xlabel(f'G17 |B| (GSE) with {model_used} model removed')
     else:
-        axs[1, 0].set_xlabel('G17 |B| (GSE) T89 model')
+        axs[1, 0].set_xlabel(f'G17 |B| (GSE) {model_used} model')
     axs[1, 0].set_ylabel('G17 |B| (GSE) observed')
     # axs[1, 0].set_title('G17; mag vs subr')
     fig.colorbar(g17_time_cmap, ax=axs[1, 0], format=DateFormatter('%m'),
@@ -568,9 +587,9 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     axs[1, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
     if is_model_subtr:
-        axs[1, 1].set_xlabel('GK2A |B| with T89 model removed')
+        axs[1, 1].set_xlabel(f'GK2A |B| with {model_used} model removed')
     else:
-        axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 model')
+        axs[1, 1].set_xlabel(f'GK2A |B| (GSE) {model_used} model')
     axs[1, 1].set_ylabel('GK2A |B| (GSE) observed')
     # axs[1, 1].set_title('GK2A; mag vs subr')
     fig.colorbar(gk2a_time_cmap, ax=axs[1, 1], format=DateFormatter('%m'),

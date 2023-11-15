@@ -221,13 +221,24 @@ def stack_from_data(sc_data):
 
 def get_date_str_from_goesTime(goes_time):
     """
-    Get a date string in the format 'YYYY-MM-DD' from GOES timestamps. Used
-    in plotting functions
+    Get a date string in the format 'YYYY-MM-DD' or 'YYYY-MM-DD -> YYYY-MM-DD'
+    from GOES timestamps, depending on the length of the time series.
 
-    :param goes_time: GOES time object
-    :return: date STR in YYYY-MM-DD format
+    :param goes_time: GOES time object, assumed to be a list of datetime
+    objects.
+    :return: date string in the appropriate format.
     """
-    date_str = goes_time[0].strftime("%Y-%m-%d")
+    if len(goes_time) == 1440:
+        # One day's worth of data, return a single date string
+        date_str = goes_time[0].strftime("%Y-%m-%d")
+    elif len(goes_time) > 1441:
+        # More than one day, return a range
+        start_date_str = goes_time[0].strftime("%Y-%m-%d")
+        end_date_str = goes_time[-1].strftime("%Y-%m-%d")
+        date_str = f'{start_date_str} to {end_date_str}'
+    else:
+        # Handle unexpected case
+        date_str = "Unknown range"
     return date_str
 
 
