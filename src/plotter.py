@@ -642,3 +642,36 @@ def dual_half_circle(center, radius, angle=0, ax=None, colors=('w', 'k'),
     for wedge in [w1, w2]:
         ax.add_artist(wedge)
     return [w1, w2]
+
+
+def plot_spacecraft_pos_GEO(spacecrafts, xlim=(-10, 10), ylim=(-10, 10)):
+    fig, ax = plt.subplots()
+
+    # Plot Earth
+    dual_half_circle((0, 0), 1, angle=90, ax=ax)
+
+    # Plot each spacecraft
+    for name, coords in spacecrafts.items():
+        ax.plot(*coords, 'o', label=name)
+
+    # Set plot limits, labels, title, and legend
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_xlabel('X GSM')
+    ax.set_ylabel('Re R')
+    ax.set_title('GEO Spacecrafts in Re R vs X GSM Coordinates')
+    ax.legend()
+
+    # Show plot
+    plt.show()
+
+    # TODO: add outline to earth, add dashed line for GEO orbit @ 6.6
+
+
+# Example usage
+spacecrafts = {
+    'GK2A': (4, 2),
+    'GOES17': (5, -1),
+    'GOES18': (6, 3)
+}
+plot_spacecraft_pos_GEO(spacecrafts)
