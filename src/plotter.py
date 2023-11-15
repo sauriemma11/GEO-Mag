@@ -1,8 +1,12 @@
+import netCDF4 as nc
+from matplotlib.patches import Wedge
+
 import utils
 from coord_transform import *
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
+import data_loader
 from utils import *
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
@@ -15,12 +19,17 @@ GOES18 : orange
 SOSMAG : blue
 """
 
+RE_EARTH = 6378.11
+g17_color = 'red'
+g18_color = 'orange'
+sosmag_color = 'blue'
+
 
 def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
                              goes18_spacecraft_data=None, whatsc_goes17=None,
                              whatsc_goes18=None, whatsc_gk2a=None,
                              gk2a_spacecraft_data=None, date_str=None,
-                             save_path=None, noonmidnighttime_dict=None):
+                             save_path=False, noonmidnighttime_dict=None):
     """
     Plot the B_GSE data from multiple spacecraft on top of each other.
     ** Note: All 3 spacecraft are optional, but at least one must be provided.
@@ -34,7 +43,8 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
     :param whatsc_gk2a: A label for the third spacecraft (optional).
     :param gk2a_spacecraft_data: Data for the third spacecraft (optional).
     :param date_str: A string representing the date (e.g., "YYYY-MM-DD").
-    :param save_path: The file path to save the generated plot (optional).
+    :param save_path: bool, if True, will save fig in current dir (
+    default=False).
 
     Example:
     plot_BGSE_fromdata_ontop(goes17_spacecraft_data, goes18_spacecraft_data,
@@ -46,30 +56,32 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
 
     if date_str is not None:
         ax1.set_title(f'B Field $GSE$, {date_str}')
+    else:
+        ax1.set_title(f'B Field $GSE$')
 
     if goes17_spacecraft_data is not None and whatsc_goes17 is not None:
         ax1.plot(goes_time, goes17_spacecraft_data[:, 0],
-                 label=f'{whatsc_goes17} ', color='red')
+                 label=f'{whatsc_goes17} ', color=g17_color)
         ax2.plot(goes_time, goes17_spacecraft_data[:, 1],
-                 label=f'{whatsc_goes17} ', color='red')
+                 label=f'{whatsc_goes17} ', color=g17_color)
         ax3.plot(goes_time, goes17_spacecraft_data[:, 2],
-                 label=f'{whatsc_goes17} ', color='red')
-
+                 label=f'{whatsc_goes17} ', color=g17_color)
+        print('LEN: ', len(goes_time))
     if goes18_spacecraft_data is not None and whatsc_goes18 is not None:
         ax1.plot(goes_time, goes18_spacecraft_data[:, 0],
-                 label=f'{whatsc_goes18} ', color='orange')
+                 label=f'{whatsc_goes18} ', color=g18_color)
         ax2.plot(goes_time, goes18_spacecraft_data[:, 1],
-                 label=f'{whatsc_goes18} ', color='orange')
+                 label=f'{whatsc_goes18} ', color=g18_color)
         ax3.plot(goes_time, goes18_spacecraft_data[:, 2],
-                 label=f'{whatsc_goes18} ', color='orange')
+                 label=f'{whatsc_goes18} ', color=g18_color)
 
     if gk2a_spacecraft_data is not None and whatsc_gk2a is not None:
         ax1.plot(goes_time, gk2a_spacecraft_data[:, 0], label=f'{whatsc_gk2a}',
-                 color='blue')
+                 color=sosmag_color)
         ax2.plot(goes_time, gk2a_spacecraft_data[:, 1], label=f'{whatsc_gk2a}',
-                 color='blue')
+                 color=sosmag_color)
         ax3.plot(goes_time, gk2a_spacecraft_data[:, 2], label=f'{whatsc_gk2a}',
-                 color='blue')
+                 color=sosmag_color)
 
     if noonmidnighttime_dict:
         y_annotation = 10
@@ -81,12 +93,14 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
             ax1.annotate('M',
                          xy=(mdates.date2num(gk2a_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='blue', fontsize=12,
+                         textcoords='offset points', color=sosmag_color,
+                         fontsize=12,
                          annotation_clip=True)
             ax1.annotate('N',
                          xy=(mdates.date2num(gk2a_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='blue', fontsize=12,
+                         textcoords='offset points', color=sosmag_color,
+                         fontsize=12,
                          annotation_clip=False)
 
         if 'g17' in noonmidnighttime_dict:
@@ -95,13 +109,13 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
             ax1.annotate('N',
                          xy=(mdates.date2num(g17_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='red',
+                         textcoords='offset points', color=g17_color,
                          fontsize=12,
                          annotation_clip=False)
             ax1.annotate('M',
                          xy=(mdates.date2num(g17_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='red',
+                         textcoords='offset points', color=g17_color,
                          fontsize=12,
                          annotation_clip=True)
 
@@ -111,13 +125,13 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
             ax1.annotate('M',
                          xy=(mdates.date2num(g18_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='orange',
+                         textcoords='offset points', color=g18_color,
                          fontsize=12,
                          annotation_clip=True)
             ax1.annotate('N',
                          xy=(mdates.date2num(g18_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='orange',
+                         textcoords='offset points', color=g18_color,
                          fontsize=12,
                          annotation_clip=False)
 
@@ -127,24 +141,33 @@ def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
     ax2.set_ylabel('$B_y$ [nT]')
     ax3.set_ylabel('$B_z$ [nT]')
 
-    ax3.set_xlabel('Time [h]')
-
     ax1.set_xticklabels([])
     ax2.set_xticklabels([])
+
     # Only show 3rd panel x axis labels:
-    ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    if len(goes_time) == 1440:
+        ax3.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+        ax3.set_xlabel('Time [h]')
+
+    elif len(goes_time) > 1441:
+        ax3.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%d'))
+        ax3.set_xlabel('Time [d]')
+
+    ax1.set_ylim(-20, 90)
+    ax2.set_ylim(-70, 20)
+    ax3.set_ylim(10, 150)
 
     plt.tight_layout()
     # TODO: Fix save file, it is not working currently.
     if save_path:
-        save_file_as = f'BGSE_{date_str}'
-        plt.savefig(f"{save_path}/{save_file_as}.png")
+        save_file_as = 'B_gse_3comp.png'
+        plt.savefig(save_file_as)
         print(f'fig saved as {save_file_as}')
         plt.show()
     else:
         plt.show()
-
 
 def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
                                             goes17_data=None, goes18_data=None,
@@ -171,20 +194,21 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
     if goes17_data is not None:
         goes17_theta = calculate_magnetic_inclination_angle_VDH(
             goes17_data[:, 0], goes17_data[:, 1], goes17_data[:, 2])
-        ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red')
+        ax1.plot(goes_time, np.degrees(goes17_theta), label='G17',
+                 color=g17_color)
 
     if goes18_data is not None:
         goes18_theta = calculate_magnetic_inclination_angle_VDH(
             goes18_data[:, 0], goes18_data[:, 1], goes18_data[:, 2])
         ax1.plot(goes_time, np.degrees(goes18_theta), label='G18',
-                 color='orange')
+                 color=g18_color)
 
     if gk2a_data is not None:
         gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
                                                               gk2a_data[:, 1],
                                                               gk2a_data[:, 2])
         ax1.plot(goes_time, np.degrees(gk2a_theta), label='SOSMAG',
-                 color='blue')
+                 color=sosmag_color)
 
     ax1.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
     ax1.set_ylabel('θ [degrees]')
@@ -204,12 +228,14 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
             ax1.annotate('M',
                          xy=(mdates.date2num(gk2a_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='blue', fontsize=12,
+                         textcoords='offset points', color=sosmag_color,
+                         fontsize=12,
                          annotation_clip=True)
             ax1.annotate('N',
                          xy=(mdates.date2num(gk2a_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='blue', fontsize=12,
+                         textcoords='offset points', color=sosmag_color,
+                         fontsize=12,
                          annotation_clip=False)
 
         if 'g17' in noonmidnighttime_dict:
@@ -218,13 +244,13 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
             ax1.annotate('N',
                          xy=(mdates.date2num(g17_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='red',
+                         textcoords='offset points', color=g17_color,
                          fontsize=12,
                          annotation_clip=False)
             ax1.annotate('M',
                          xy=(mdates.date2num(g17_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='red',
+                         textcoords='offset points', color=g17_color,
                          fontsize=12,
                          annotation_clip=True)
 
@@ -234,13 +260,13 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
             ax1.annotate('M',
                          xy=(mdates.date2num(g18_midnight), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='orange',
+                         textcoords='offset points', color=g18_color,
                          fontsize=12,
                          annotation_clip=True)
             ax1.annotate('N',
                          xy=(mdates.date2num(g18_noon), y_annotation),
                          xytext=(-15, 10),
-                         textcoords='offset points', color='orange',
+                         textcoords='offset points', color=g18_color,
                          fontsize=12,
                          annotation_clip=False)
 
@@ -299,19 +325,19 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 #
 #     ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='blue', fontsize=12,
+#                  textcoords='offset points', color=sosmag_color, fontsize=12,
 #                  annotation_clip=True)
 #     ax1.annotate('M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='red', fontsize=12,
+#                  textcoords='offset points', color=g17_color, fontsize=12,
 #                  annotation_clip=True)
 #     ax1.annotate('N', xy=(mdates.date2num(g18_noon_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='red', fontsize=12,
+#                  textcoords='offset points', color=g17_color, fontsize=12,
 #                  annotation_clip=False)
 #     ax1.annotate('N', xy=(mdates.date2num(gk2a_noon_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='blue', fontsize=12,
+#                  textcoords='offset points', color=sosmag_color, fontsize=12,
 #                  annotation_clip=False)
 #
 #     # print(gk2a_midnight_time)
@@ -385,10 +411,10 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 #
 #     ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='blue', fontsize=12)
+#                  textcoords='offset points', color=sosmag_color, fontsize=12)
 #     ax1.annotate(f'M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
 #                  xytext=(-15, 10),
-#                  textcoords='offset points', color='red', fontsize=12)
+#                  textcoords='offset points', color=g17_color, fontsize=12)
 #
 #     title = '(SOSMAG - ' + whatModel + ') - (' + whatSpacecraft + ' - ' +
 #             whatModel + ')\n{}'.format(
@@ -438,13 +464,14 @@ def plot_sc_vs_sc_scatter(x, y, x_label='X-axis', y_label='Y-axis',
         polynomial = utils.calc_line_of_best_fit(x, y)
         x_fit = np.linspace(min(x), max(x), len(x))
         y_fit = polynomial(x_fit)
-        plt.plot(x_fit, y_fit, color='red', linewidth=1)
+        plt.plot(x_fit, y_fit, color=g17_color, linewidth=1)
 
     plt.show()
 
 
 def plot_components_vs_t89_with_color(spacecraft_name, data_list,
                                       t89_data_list, timestamps,
+                                      model_str='TSXX',
                                       output_file=None):
     # Unpack x, y, and z components from the data and T89 data
     x_component, y_component, z_component = unpack_components(data_list)
@@ -478,9 +505,10 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
         scatter = ax.scatter(component, t89_component, c=numeric_timestamps,
                              cmap='viridis', norm=color_norm)
         ax.set_xlabel(f'{spacecraft_name} {label} Component')
-        ax.set_ylabel(f'T89 {label} Component')
+        ax.set_ylabel(f'{model_str} {label} Component')
         ax.set_title(
-            f'{spacecraft_name} {label} Component vs T89 {label} Component')
+            f'{spacecraft_name} {label} Component vs {model_str} {label} '
+            f'Component')
         fig.colorbar(scatter, ax=ax, format=DateFormatter('%m-%d'),
                      label='Date')
 
@@ -496,7 +524,8 @@ def plot_components_vs_t89_with_color(spacecraft_name, data_list,
 
 def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
                                     gk2a_mag_data, gk2a_sub_data,
-                                    gk2a_time_list, output_file=None,
+                                    gk2a_time_list, model_used='TSXX',
+                                    output_file=None,
                                     best_fit=False, is_model_subtr=False):
     fig, axs = plt.subplots(2, 2,
                             figsize=(12, 12))  # Creates a 2x2 grid of subplots
@@ -523,16 +552,17 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     axs[0, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     if is_model_subtr:
-        axs[0, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
-        axs[0, 0].set_ylabel('GK2A |B| (GSE) with T89 model removed')
+        axs[0, 0].set_xlabel(f'G17 |B| (GSE) with {model_used} model removed')
+        axs[0, 0].set_ylabel(f'GK2A |B| (GSE) with {model_used} model removed')
+
     else:
-        axs[0, 0].set_xlabel('G17 |B| (GSE) T89 model')
-        axs[0, 0].set_ylabel('GK2A |B| (GSE) T89 model')
+        axs[0, 0].set_xlabel(f'G17 |B| (GSE) {model_used} model')
+        axs[0, 0].set_ylabel(f'GK2A |B| (GSE) {model_used} model')
     fig.colorbar(g17_time_cmap, ax=axs[0, 0], format=DateFormatter(
         '%m'), label='Date')
     if best_fit:
         polynomial = calc_line_of_best_fit(x, y)
-        axs[0, 0].plot(x, polynomial(x), color='red')
+        axs[0, 0].plot(x, polynomial(x), color=g17_color)
 
     # Scatter plot 2: mag vs mag with date-based color mapping for GK2A
     x, y = g17_mag_data, gk2a_mag_data
@@ -545,39 +575,39 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
                  label='Date')  # Add colorbar for dates
     if best_fit:
         polynomial = calc_line_of_best_fit(x, y)
-        axs[0, 1].plot(x, polynomial(x), color='red')
+        axs[0, 1].plot(x, polynomial(x), color=g17_color)
 
     # Scatter plot 3: G17; mag vs subr with date-based color mapping for G17
     x, y = g17_sub_data, g17_mag_data
     axs[1, 0].scatter(x, y, c=g17_time_numeric,
                       cmap='viridis', norm=g17_time_norm)
     if is_model_subtr:
-        axs[1, 0].set_xlabel('G17 |B| (GSE) with T89 model removed')
+        axs[1, 0].set_xlabel(f'G17 |B| (GSE) with {model_used} model removed')
     else:
-        axs[1, 0].set_xlabel('G17 |B| (GSE) T89 model')
+        axs[1, 0].set_xlabel(f'G17 |B| (GSE) {model_used} model')
     axs[1, 0].set_ylabel('G17 |B| (GSE) observed')
     # axs[1, 0].set_title('G17; mag vs subr')
     fig.colorbar(g17_time_cmap, ax=axs[1, 0], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
     if best_fit:
         polynomial = calc_line_of_best_fit(x, y)
-        axs[1, 0].plot(x, polynomial(x), color='red')
+        axs[1, 0].plot(x, polynomial(x), color=g17_color)
 
     # Scatter plot 4: GK2A; mag vs subr with date-based color mapping for GK2A
     x, y = gk2a_sub_data, gk2a_mag_data
     axs[1, 1].scatter(x, y, c=gk2a_time_numeric,
                       cmap='viridis', norm=gk2a_time_norm)
     if is_model_subtr:
-        axs[1, 1].set_xlabel('GK2A |B| with T89 model removed')
+        axs[1, 1].set_xlabel(f'GK2A |B| with {model_used} model removed')
     else:
-        axs[1, 1].set_xlabel('GK2A |B| (GSE) T89 model')
+        axs[1, 1].set_xlabel(f'GK2A |B| (GSE) {model_used} model')
     axs[1, 1].set_ylabel('GK2A |B| (GSE) observed')
     # axs[1, 1].set_title('GK2A; mag vs subr')
     fig.colorbar(gk2a_time_cmap, ax=axs[1, 1], format=DateFormatter('%m'),
                  label='Date')  # Add colorbar for dates
     if best_fit:
         polynomial = calc_line_of_best_fit(x, y)
-        axs[1, 1].plot(x, polynomial(x), color='red')
+        axs[1, 1].plot(x, polynomial(x), color=g17_color)
 
     # TODO: Fix axes limits
     # axs[1,0].set_xlim(75,130)
@@ -596,3 +626,52 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
 
     # Show the plot (optional)
     plt.show()
+
+
+def dual_half_circle(center, radius, angle=0, ax=None, colors=('w', 'k'),
+                     **kwargs):
+    """
+	Add two half circles to the axes *ax* (or the current axes) with the
+	specified facecolors *colors* rotated at *angle* (in degrees).
+	"""
+    if ax is None:
+        ax = plt.gca()
+    theta1, theta2 = angle, angle + 180
+    w1 = Wedge(center, radius, theta1, theta2, fc=colors[1], **kwargs)
+    w2 = Wedge(center, radius, theta2, theta1, fc=colors[0], **kwargs)
+    for wedge in [w1, w2]:
+        ax.add_artist(wedge)
+    return [w1, w2]
+
+
+def plot_spacecraft_pos_GEO(spacecrafts, xlim=(-10, 10), ylim=(-10, 10)):
+    fig, ax = plt.subplots()
+
+    # Plot Earth
+    dual_half_circle((0, 0), 1, angle=90, ax=ax)
+
+    # Plot each spacecraft
+    for name, coords in spacecrafts.items():
+        ax.plot(*coords, 'o', label=name)
+
+    # Set plot limits, labels, title, and legend
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_xlabel('X GSM')
+    ax.set_ylabel('Re R')
+    ax.set_title('GEO Spacecrafts in Re R vs X GSM Coordinates')
+    ax.legend()
+
+    # Show plot
+    plt.show()
+
+    # TODO: add outline to earth, add dashed line for GEO orbit @ 6.6
+
+
+# Example usage
+spacecrafts = {
+    'GK2A': (4, 2),
+    'GOES17': (5, -1),
+    'GOES18': (6, 3)
+}
+plot_spacecraft_pos_GEO(spacecrafts)

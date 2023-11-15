@@ -5,50 +5,79 @@ import pandas as pd
 
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
-    # Calculate the time difference for the input longitude
+    """
+    Calculate the time difference based on a given longitude (degrees).
+
+    Parameters
+    ----------
+    longitude_degrees (float): The longitude in degrees. Positive for east
+    and negative for west.
+    hemisphere (str, optional): The hemisphere ('E' for east, 'W' for west.
+    Defaults to 'W'.
+
+    Returns
+    -------
+    time_diff (float): The time difference in hours from the Greenwich Mean
+    Time (GMT).
+    """
+
+    DEGREES_IN_CIRCLE = 360
+    HOURS_IN_DAY = 24
     # Input should be in degrees WEST. If east, (GK2A for example is at
     # 128.2 E) input degrees east + 360
     if hemisphere == 'E':
-        longitude_degrees = 360 - longitude_degrees
+        longitude_degrees = DEGREES_IN_CIRCLE - longitude_degrees
 
-    time_diff = (longitude_degrees / 360) * 24
+    time_diff = (longitude_degrees / DEGREES_IN_CIRCLE) * HOURS_IN_DAY
 
     return time_diff
 
 
 def unpack_components(data_list):
-    # Unpack x, y, and z components from a list of data points
-    x_component = [point[0] for point in data_list]
-    y_component = [point[1] for point in data_list]
-    z_component = [point[2] for point in data_list]
-    return x_component, y_component, z_component
+    """
+    Unpack xyz components from a list of data points.
 
+    Parameters
+    ----------
+    data_list (List[Tuple[float, float, float]]): A list of tuples,
+    where each tuple contain x, y, z components.
+
+    Returns
+    -------
+    Tuple[List[float], List[float], List[float]]: Separate lists of x, y,
+    and z components.
+
+    """
+    x_component, y_component, z_component = zip(*data_list)
+    return list(x_component), list(y_component), list(z_component)
 
 def calc_hourly_stddev(datetime_list, subtr_list, kp_mask=None):
     """
     Calculate hourly standard deviation of subtraction data with an optional
     Kp mask.
 
-    Args:
-        datetime_list (list): List of datetime values.
-        subtr_list (list): List of subtraction data.
-        kp_mask (list, optional): List of boolean values indicating Kp
-        values over threshold.
-                                  If provided, only data points where
-                                  kp_mask is True will be used.
+    Parameters
+    ----------
+    datetime_list (list): List of datetime values.
+    subtr_list (list): List of subtraction data.
+    kp_mask (list, optional): List of boolean values indicating Kp values
+    over threshold. Default is None.
+        If provided, only data points where kp_mask is True will be used.
 
-    Returns:
-        pd.Series: Hourly standard deviation of subtraction data.
+    Returns
+    -------
+    hourly_std_dev (pd.Series): Hourly standard deviation of subtraction data.
+
     """
     # Create a pandas DataFrame with datetime as the index
     df = pd.DataFrame({'datetime': datetime_list, 'subtraction': subtr_list})
     df.set_index('datetime', inplace=True)
 
-    # Apply the Kp mask if provided
+    # apply the Kp mask
     if kp_mask is not None:
         df['subtraction'] = df['subtraction'].mask(kp_mask)
 
-    # Resample the data to hourly frequency and calculate standard deviation
+    # resample data to hourly freq, take std dev
     hourly_std_dev = df['subtraction'].resample('H').std()
 
     return hourly_std_dev
@@ -60,11 +89,21 @@ def align_datasets(time_list_1: List, time_list_2: List,
     """
     Align two datasets based on their timestamps and return the paired data.
 
-    :param time_list_1: Timestamps of the first dataset.
-    :param time_list_2: Timestamps of the second dataset.
-    :param data_1: Data points of the first dataset.
-    :param data_2: Data points of the second dataset.
-    :return: Tuple of numpy arrays with aligned data from both datasets.
+    Parameters
+    ----------
+    time_list_1 : List[dt.datetime]
+        Timestamps of the first dataset.
+    time_list_2 : List[dt.datetime]
+        Timestamps of the second dataset.
+    data_1 : List[float]
+        Data points of the first dataset.
+    data_2 : List[float]
+        Data points of the second dataset.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Two numpy arrays with aligned data from both datasets.
     """
     # Assuming the timestamps are already datetime objects and the lists are
     # sorted
@@ -82,7 +121,24 @@ def align_datasets(time_list_1: List, time_list_2: List,
 
     return np.array(aligned_data_1), np.array(aligned_data_2)
 
+
 def calculate_std_dev(dataset1, dataset2):
+    """
+    Calculate the standard deviation of the differences between two datasets.
+
+    Parameters
+    ----------
+    dataset1 (List[float]): The first dataset.
+    dataset2 (List[float]): The second dataset.
+
+    Returns
+    -------
+    float: The standard deviation of the differences between the two datasets.
+
+    Raises
+    ------
+    ValueError: If the input datasets do not have the same shape.
+    """
     # Convert to arrays, handling potential raggedness
     array1 = np.array(dataset1, dtype=object) if isinstance(dataset1[0],
                                                             list) else \
@@ -91,7 +147,7 @@ def calculate_std_dev(dataset1, dataset2):
     array2 = np.array(dataset2, dtype=object) if isinstance(dataset2[0],
                                                             list) else \
         np.array(
-        dataset2)
+            dataset2)
 
     # Calculate difference
     # Ensure both arrays are the same length and shape
@@ -106,16 +162,76 @@ def calculate_std_dev(dataset1, dataset2):
 
 
 def calculate_total_magnetic_field(x, y, z):
-    return np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    """
+    Calculate the total magnetic field from its x, y, and z components.
+
+    Parameters
+    ----------
+    x (np.ndarray): The x component of the magnetic field.
+    y (np.ndarray): The y component of the magnetic field.
+    z (np.ndarray): The z component of the magnetic field.
+
+    Returns
+    -------
+    total_field (np.ndarray): The total magnetic field calculated from the
+    x, y, and z components.
+    """
+    total_field = np.sqrt(np.square(x) + np.square(y) + np.square(z))
+    return total_field
 
 
 def convert_timestamps_to_numeric(timestamps):
-    # Convert timestamps to numeric values (e.g., seconds since a reference
-    # date)
+    """
+    Convert a list of datetime objects to numeric values representing
+    seconds since a reference date.
+
+    Parameters
+    ----------
+    timestamps (List[dt.datetime]): A list of datetime objects.
+
+    Returns
+    -------
+    numeric_values (List[float]): Numeric values representing seconds since
+    the first timestamp in the list.
+
+    Raises
+    ------
+    TypeError: If any item in 'timestamps' is not a datetime object.
+    ValueError: If the 'timestamps' list is empty.
+    """
+    if not all(isinstance(t, dt.datetime) for t in timestamps):
+        raise TypeError("All items in 'timestamps' must be datetime objects.")
+    if not timestamps:
+        raise ValueError("The 'timestamps' list cannot be empty.")
+
     numeric_values = [(t - timestamps[0]).total_seconds() for t in timestamps]
     return numeric_values
 
+
 def calc_line_of_best_fit(x, y):
+    """
+    Calculate the line of best fit for a set of x and y values.
+
+    Parameters
+    ----------
+    x (List[float]): The x-values of the data points.
+    y (List[float]): The y-values of the data points.
+
+    Returns
+    -------
+    polynomial (np.poly1d): A polynomial representing the line of best fit.
+
+    Raises
+    ------
+    TypeError: If 'x' or 'y' is not a list.
+    ValueError: If 'x' and 'y' lists are not of equal length.
+
+    """
+    if not (isinstance(x, list) and isinstance(y, list)):
+        raise TypeError("Both 'x' and 'y' should be lists.")
+    if len(x) != len(y):
+        raise ValueError("Length of 'x' and 'y' lists must be equal.")
+
     x = np.asarray(x)
     y = np.asarray(y)
     mask = np.isfinite(x) & np.isfinite(
@@ -128,6 +244,32 @@ def calc_line_of_best_fit(x, y):
 
 
 def get_avg_data_over_interval(time_list, data_list, interval='60T'):
+    """
+    Calculate the average data over a specified time interval.
+
+    Parameters
+    ----------
+    time_list (List[dt.datetime]): List of datetime objects.
+    data_list (List[float]): Corresponding data values.
+    interval (str): Time interval for averaging, in pandas offset string
+    format.
+
+    Returns
+    -------
+    avg_data (Tuple[List[dt.datetime], List[float]]): The resampled time
+    list and the corresponding averaged data.
+
+    Raises
+    ------
+    TypeError: If 'time_list' or 'data_list' is not a list.
+    ValueError: If 'time_list' and 'data_list' are not of equal length.
+    """
+    if not (isinstance(time_list, list) and isinstance(data_list, list)):
+        raise TypeError("'time_list' and 'data_list' should be lists.")
+    if len(time_list) != len(data_list):
+        raise ValueError(
+            "Length of 'time_list' and 'data_list' must be equal.")
+
     df = pd.DataFrame({'time': time_list, 'data': data_list})
     df.set_index('time', inplace=True)
     df_resampled = df.resample(interval).mean()
@@ -136,6 +278,34 @@ def get_avg_data_over_interval(time_list, data_list, interval='60T'):
 
 
 def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):
+    """
+    Find the local times for noon and midnight based on a given time
+    difference and date.
+
+    Parameters
+    ----------
+    time_diff (float): The time difference in hours.
+    date_str (str): The date in 'YYYY-MM-DD' format.
+    gk2a (bool): Flag to adjust time calculation for GK2A, defaults to False.
+
+    Returns
+    -------
+    times (Tuple[dt.datetime, dt.datetime]): The calculated local times for
+    noon and midnight.
+
+    Raises
+    ------
+    TypeError: If 'time_diff' is not a number.
+    ValueError: If 'date_str' is not in the correct format.
+    """
+    if not isinstance(time_diff, (int, float)):
+        raise TypeError("'time_diff' must be a number.")
+    try:
+        date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        raise ValueError(
+            "Incorrect 'date_str' format, should be 'YYYY-MM-DD'.")
+
     date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
     date_obj_previous_day = date_obj - dt.timedelta(
         days=1)  # For plotting noon time GK2A
@@ -162,23 +332,39 @@ def find_noon_and_midnight_time(time_diff, date_str, gk2a=False):
 
 def mean_and_std_dev(data_1, data_2):
     """
-    Calculate the mean difference and the standard deviation of the differences
-    between two datasets while ignoring NaN values.
+    Calculate the mean difference and the standard deviation of the
+    differences between two datasets while ignoring NaN values.
 
-    :param data_1: Data points of the first dataset.
-    :param data_2: Data points of the second dataset.
-    :return: A tuple containing the mean difference and the standard deviation.
+    Parameters
+    ----------
+    data_1 (List[float]): Data points of the first dataset.
+    data_2 (List[float]): Data points of the second dataset.
+
+    Returns
+    -------
+    stats (Tuple[float, float]): A tuple containing the mean difference and
+    the standard deviation.
+
+    Raises
+    ------
+    TypeError: If 'data_1' or 'data_2' is not a list.
+    ValueError: If 'data_1' and 'data_2' lists are not of equal length.
     """
     # Convert lists to numpy arrays if they are not already
+    if not (isinstance(data_1, list) and isinstance(data_2, list)):
+        raise TypeError("Both 'data_1' and 'data_2' should be lists.")
+    if len(data_1) != len(data_2):
+        raise ValueError(
+            "Length of 'data_1' and 'data_2' lists must be equal.")
+
     if isinstance(data_1, list):
         data_1 = np.array(data_1, dtype=np.float64)
     if isinstance(data_2, list):
         data_2 = np.array(data_2, dtype=np.float64)
 
-    # Perform the subtraction
     differences = data_1 - data_2
 
-    # Calculate mean and standard deviation, ignoring NaN values
+    # ignoring NaN values for mean and std:
     mean_diff = np.nanmean(differences)
     std_dev = np.nanstd(differences)
 
