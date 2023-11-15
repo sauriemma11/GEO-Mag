@@ -58,9 +58,9 @@ def process_spacecraft_data(g17_file=None, g18_file=None, gk2a_file=None,
 
     # Used to plot 'noon' and 'midnight' times (optional arg)
     noonmidnighttimes_dict = {}
-    gk2a_noon, gk2a_midnight, g17_noon, g17_midnight, g18_noon, g18_midnight\
+    gk2a_noon, gk2a_midnight, g17_noon, g17_midnight, g18_noon, g18_midnight \
         = [
-                                                                                   None] * 6
+              None] * 6
 
     if gk2a_deg:
         gk2a_time_diff = calculate_time_difference(float(gk2a_deg), 'E')
