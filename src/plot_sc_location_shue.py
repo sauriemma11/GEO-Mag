@@ -56,9 +56,9 @@ from cdasws.datarepresentation import DataRepresentation as dr
 #     print(variable['Name'], variable['LongDescription'])
 # var_names = ['BZ_GSE1800', 'BZ_GSM1800', 'Pressure1800']
 
-var_names = ['BZ_GSM', 'Pressure']
-data = cdas.get_data('OMNI_HRO_1MIN', var_names, '2023-02-26T21:30:00Z',
-                     '2023-02-26T21:59:00Z', dataRepresentation=dr.XARRAY)[1]
+# var_names = ['BZ_GSM', 'Pressure']
+# data = cdas.get_data('OMNI_HRO_1MIN', var_names, '2023-02-26T21:30:00Z',
+#                      '2023-02-26T21:59:00Z', dataRepresentation=dr.XARRAY)[1]
 
 
 # print(data)
@@ -119,12 +119,36 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_omni_data(date_str, minute):
-    # convert timestamp to the spacepy ticktock format for OMNI data retrieval
-    ticks = spt.Ticktock([timestamp], 'UTC')
-    data = omni.get_omni(ticks)
+def get_omni_values(date_str, hour, startminute, endminute):
+    """
+    Get BZ_imf and solar wind pressure from OMNI data.
 
-    return data['BzIMF'][0], data['Pressure'][0]
+    Parameters:
+        date_str (str): Date in 'YYYY-MM-DD' format.
+        time_input (int or tuple): Single minute or a range of minutes.
+        is_single_minute (bool): Flag indicating if the input is a single
+        minute.
+
+    Returns:
+        tuple: (BZ_imf, solar_wind_pressure)
+    """
+
+    if startminute == endminute:
+        start_time = f"{date_str}T{hour}:{startminute}:00Z"
+        end_time = f"{date_str}T{hour}:{endminute + 1}:00Z"
+    else:
+        start_time = f"{date_str}T{hour}:{startminute}:00Z"
+        end_time = f"{date_str}T{hour}:{endminute}:00Z"
+
+    data = cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure'], start_time,
+                         end_time, dataRepresentation=dr.XARRAY)[1]
+
+    bz_imf = data.BZ_GSM.values[
+        0] if 'BZ_GSM' in data and data.BZ_GSM.values.size > 0 else np.nan
+    sw_pressure = data.Pressure.values[
+        0] if 'Pressure' in data and data.Pressure.values.size > 0 else np.nan
+
+    return bz_imf, sw_pressure
 
 
 def j2000_to_datetime(timestamp):  # for sosmag data
@@ -341,20 +365,17 @@ def user_selection_criteria(satellites_data, date_str, hour):
     """
 
     user_input = input(
-        "Enter a minute (e.g., '30') or a range of minutes (e.g., '15-45'): ")
+        "Enter a minute (e.g., '30') or a range of minutes (e.g., '02-15'): ")
 
     if '-' in user_input:
-        start_minute, end_minute = user_input.split('-')
-        # process_time_range(satellites_data, date_str, hour, start_minute,
-        #                    end_minute)
+        start_minute, end_minute = map(int, user_input.split('-'))
         return process_time_range(satellites_data, date_str, hour,
-                                  start_minute, end_minute)
-
+                                  start_minute,
+                                  end_minute), start_minute, end_minute
     else:
+        minute = int(user_input)
         return process_single_minute(satellites_data, date_str, hour,
-                                     user_input)
-        # process_single_minute(satellites_data, date_str, hour, user_input)
-
+                                     minute), minute, minute
 
 def process_time_range(satellites_data, date_str, hour, start_minute,
                        end_minute):
@@ -386,7 +407,7 @@ def process_time_range(satellites_data, date_str, hour, start_minute,
             coordinates_dict[satellite_name] = average_data[
                 ['X', 'Y', 'Z']].to_dict()
 
-    print(coordinates_dict)
+    # print(coordinates_dict)
     return coordinates_dict
 
 
@@ -414,7 +435,7 @@ def process_single_minute(satellites_data, date_str, hour, minute):
             coordinates_dict[satellite_name] = specific_data[
                 ['X', 'Y', 'Z']].to_dict()
 
-    print(coordinates_dict)
+    # print(coordinates_dict)
     return coordinates_dict
 
 
@@ -424,25 +445,28 @@ def main():
 
     date_str = args.timestamp[:8]
     hour = datetime.strptime(args.timestamp, '%Y%m%d%H').hour
-    timestamp_for_OMNI = datetime.strptime(args.timestamp, '%Y%m%d%H')
 
     # User selects data based on their criteria
-    coordinates_dict = user_selection_criteria(satellites_data, date_str, hour)
+    coordinates_dict, start_minute, end_minute = user_selection_criteria(
+        satellites_data, date_str, hour)
+
+    timestamp_str_with_minute = args.timestamp + f'{start_minute:02d}'
+    timestamp_for_OMNI_title = datetime.strptime(timestamp_str_with_minute,
+                                                 '%Y%m%d%H%M')
 
     # Transform the selected coordinates from GSE to Earth-centered system
-    # transformed_dict = apply_gse_to_earth_to_dict(coordinates_dict)
     transformed_dict = apply_gse_to_earth_to_dict(coordinates_dict)
 
-    # for satellite, coords in transformed_dict.items():
-    #     print(f"{satellite}: {coords}")
+    imf_bz, solar_wind_pressure = get_omni_values(date_str, hour, start_minute,
+                                                  end_minute)
 
-    # imf_bz, solar_wind_pressure = get_omni_data(timestamp_for_OMNI)
-    imf_bz, solar_wind_pressure = -12, 6.0
+    # imf_bz, solar_wind_pressure = -12, 6.0
 
     # Now, you can use the plotting function from plotting.py
     plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                                                           solar_wind_pressure,
-                                                          imf_bz)
+                                                          imf_bz,
+                                                          timestamp_for_OMNI_title)
 
 
 if __name__ == "__main__":

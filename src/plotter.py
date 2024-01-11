@@ -656,7 +656,8 @@ def dual_half_circle(center, radius, angle=0, ax=None, colors=('w', 'k'),
 
 def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                                                           solar_wind_pressure,
-                                                          imf_bz):
+                                                          imf_bz,
+                                                          timestamp_for_OMNI_title):
     """
     Plot spacecraft positions with Earth represented by dual half circles
     and the magnetopause boundary.
@@ -700,13 +701,22 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
     ax.set_xlim(-10, 10)
     ax.set_ylim(-10, 10)
 
+    annotation_text = f"IMF Bz: {imf_bz:.2f} nT\nSolar Wind Pressure: " \
+                      f"{solar_wind_pressure:.2f} nPa"
+    ax.annotate(annotation_text, xy=(0.05, 0.05), xycoords='axes fraction',
+                fontsize=9, ha='left', va='bottom',
+                bbox=dict(boxstyle="round,pad=0.3", edgecolor="black",
+                          facecolor="white"))
+
     # Add labels and legend
     ax.set_xlabel('X [Re]')
     # ax.set_ylabel('Y [Re]')
     ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
 
     ax.legend()
-    plt.title('Spacecraft Positions (GSE)')
+    time_title = f"{timestamp_for_OMNI_title} UTC"
+    title = f"Spacecraft Positions (GSE) - {time_title}"
+    plt.title(title)
 
     plt.show()
 
