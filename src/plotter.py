@@ -1,5 +1,11 @@
 import netCDF4 as nc
-from matplotlib.patches import Wedge
+from matplotlib.patches import Wedge, Circle
+import spacepy.plot as spp  # For dual_half_circle
+import spacepy.empiricals as spe  # For getMagnetopause
+import numpy as np
+import spacepy.omni as omni
+import spacepy.time as spt
+from datetime import datetime, timedelta
 
 import utils
 from coord_transform import *
@@ -17,12 +23,16 @@ NOTE - Color of spacecraft should be same across all plotting functions
 GOES17 : red
 GOES18 : orange
 SOSMAG : blue
+GOES16 : green
 """
 
-RE_EARTH = 6378.11
+GEOSTAT = 6.6  # Geostationary orbit radius in Earth radii
+RE_EARTH = 6378.11  # [km]
+
 g17_color = 'red'
 g18_color = 'orange'
 sosmag_color = 'blue'
+g16_color = 'green'
 
 
 def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
@@ -622,7 +632,7 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
 
     # Save the plot to the output file if provided
     if output_file:
-        plt.savefig(output_file)
+        "plt.savefig(output_file)"
 
     # Show the plot (optional)
     plt.show()
@@ -644,34 +654,90 @@ def dual_half_circle(center, radius, angle=0, ax=None, colors=('w', 'k'),
     return [w1, w2]
 
 
-def plot_spacecraft_pos_GEO(spacecrafts, xlim=(-10, 10), ylim=(-10, 10)):
-    fig, ax = plt.subplots()
+def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
+                                                          solar_wind_pressure,
+                                                          imf_bz):
+    """
+    Plot spacecraft positions with Earth represented by dual half circles
+    and the magnetopause boundary.
 
-    # Plot Earth
-    dual_half_circle((0, 0), 1, angle=90, ax=ax)
+    Parameters:
+        transformed_dict (dict): Dictionary containing transformed
+        spacecraft coordinates.
+        solar_wind_pressure (float): Solar wind dynamic pressure in nPa.
+        imf_bz (float): Interplanetary Magnetic Field Bz component in nT.
+    """
+    fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
 
-    # Plot each spacecraft
-    for name, coords in spacecrafts.items():
-        ax.plot(*coords, 'o', label=name)
+    # Plot Earth with spacepy's dual half circle
+    spp.dual_half_circle((0, 0), 1, ax=ax, fill=True)
 
-    # Set plot limits, labels, title, and legend
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
-    ax.set_xlabel('X GSM')
-    ax.set_ylabel('Re R')
-    ax.set_title('GEO Spacecrafts in Re R vs X GSM Coordinates')
+    # Add GEO circle
+    geo_circle = Circle((0, 0), GEOSTAT, color='red', linestyle='--',
+                        fill=False)
+    ax.add_artist(geo_circle)
+
+    # # Plot spacecraft locations X vs Y:
+    # for satellite, coords in transformed_dict.items():
+    #     ax.plot(coords['X'] / RE_EARTH, coords['Y'] / RE_EARTH, 'o',
+    #     label=satellite)
+
+    # Plot spacecraft locations with modified Y-axis
+    for satellite, coords in transformed_dict.items():
+        # Recalculate Y as the radial distance in the Y-Z plane
+        modified_Y = np.sqrt(coords['Y'] ** 2 + coords['Z'] ** 2) / RE_EARTH
+        ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite)
+
+    # Calculate and plot the magnetopause using the Shue et al. (1997) model
+    sw_params = {'P': solar_wind_pressure, 'Bz': imf_bz}
+    # localtimes = np.arange(5, 19.1, 0.5)  # Local times from 5 to 19 in
+    # steps of 0.5
+    # mp_pos = spe.getMagnetopause(sw_params, LTs=localtimes)
+    mp_pos = spe.getMagnetopause(sw_params)
+    ax.plot(mp_pos[0, :, 0], mp_pos[0, :, 1], 'b--')
+
+    # Set plot limits
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-10, 10)
+
+    # Add labels and legend
+    ax.set_xlabel('X [Re]')
+    # ax.set_ylabel('Y [Re]')
+    ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
+
     ax.legend()
+    plt.title('Spacecraft Positions (GSE)')
 
-    # Show plot
     plt.show()
 
-    # TODO: add outline to earth, add dashed line for GEO orbit @ 6.6
-
-
-# Example usage
-spacecrafts = {
-    'GK2A': (4, 2),
-    'GOES17': (5, -1),
-    'GOES18': (6, 3)
-}
-plot_spacecraft_pos_GEO(spacecrafts)
+# def plot_spacecraft_pos_GEO(spacecrafts, xlim=(-10, 10), ylim=(-10, 10)):
+#     fig, ax = plt.subplots()
+#
+#     # Plot Earth
+#     dual_half_circle((0, 0), 1, angle=90, ax=ax)
+#
+#     # Plot each spacecraft
+#     for name, coords in spacecrafts.items():
+#         ax.plot(*coords, 'o', label=name)
+#
+#     # Set plot limits, labels, title, and legend
+#     ax.set_xlim(*xlim)
+#     ax.set_ylim(*ylim)
+#     ax.set_xlabel('X GSM')
+#     ax.set_ylabel('Re R')
+#     ax.set_title('GEO Spacecrafts in Re R vs X GSM Coordinates')
+#     ax.legend()
+#
+#     # Show plot
+#     plt.show()
+#
+#     # TODO: add outline to earth, add dashed line for GEO orbit @ 6.6
+#
+#
+# # Example usage
+# spacecrafts = {
+#     'GK2A': (4, 2),
+#     'GOES17': (5, -1),
+#     'GOES18': (6, 3)
+# }
+# plot_spacecraft_pos_GEO(spacecrafts)
