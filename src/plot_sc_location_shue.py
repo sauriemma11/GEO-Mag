@@ -223,13 +223,30 @@ def apply_gse_to_earth_to_dict(coordinates_dict):
         }
     return transformed_coordinates
 
+def convert_GSE_from_GK2A_csv(spc_coords_file, hour):
+    # gk2a_data = pd.read_csv(satellite_file)
+    # # Ensure the 'time' column is in the correct format
+    # # Modify the format string as needed to match your CSV data
+    # gk2a_data['time'] = pd.to_datetime(gk2a_data['time'],
+    #                                    format='%Y%m%d %H:%M:%S.%f')
+    # # Filter the data
+    # gk2a_data = gk2a_data[gk2a_data['time'].dt.hour == hour]
+    # satellite_data = gk2a_data
 
-def cartesian_to_polar(pos):
-    x, y, z = pos
-    r = np.sqrt(x ** 2 + y ** 2)
-    theta = np.degrees(np.arctan2(y, x))
-    return r, theta
+    spc_coords = pd.read_csv(spc_coords_file)
+    spc_coords['time'] = pd.to_datetime(spc_coords['time'],
+                                        format='%Y-%m-%d %H:%M:%S.%f')
+    spc_coords.set_index('time', inplace=True)
+    spc_coords = spc_coords.resample('T').first().reset_index()
 
+    spc_coords = spc_coords[spc_coords['time'].dt.hour == hour]
+
+    x, y, z = spc_coords['0'], spc_coords['1'], spc_coords['2']
+
+    spc_coords_df = pd.DataFrame(
+        {'time': spc_coords['time'], 'X': x, 'Y': y, 'Z': z})
+
+    return spc_coords_df
 
 def convert_GSE(spc_coords_file, hour):
     """
@@ -270,54 +287,6 @@ def convert_GSE(spc_coords_file, hour):
 
     return filtered_coords_df
 
-
-def convertGSEkmGSMRe(spc_coords_file, hour):
-    """
-    Convert GSE coordinates to GSM coordinates and filter based on the
-    specified hour.
-
-    Parameters:
-        spc_coords_file (str): Path to the spc_coords file (must be .nc file).
-        hour (int): Hour value to filter the coordinates.
-
-    Returns:
-        pandas.DataFrame: DataFrame containing columns [time, Xgsm, Ygsm,
-        Zgsm] with units being positional data cartesian GSM in RE.
-    """
-
-    spc_coords = nc.Dataset(spc_coords_file)
-    spcCoords_time = goes_epoch_to_datetime(
-        spc_coords['time'][:]).to_pydatetime().tolist()
-    tickz = spt.Ticktock(spcCoords_time, 'UTC')
-
-    x, y, z = spc_coords['gse_xyz'][:, 0], spc_coords['gse_xyz'][:, 1], \
-    spc_coords['gse_xyz'][:, 2]
-    pos_gse = np.column_stack((x, y, z))
-    pos_gse_coords = spcoords.Coords(pos_gse, 'GSE', 'car', ticks=tickz)
-
-    pos_gsm_coords = pos_gse_coords.convert('GSM', 'car')
-    pos_x_gsm, pos_y_gsm, pos_z_gsm = pos_gsm_coords.x[:], pos_gsm_coords.y[
-                                                           :], \
-        pos_gsm_coords.z[
-                                                               :]
-
-    spc_coords_df = pd.DataFrame(
-        {'time': spcCoords_time, 'Xgsm': pos_x_gsm, 'Ygsm': pos_y_gsm,
-         'Zgsm': pos_z_gsm})
-
-    # Filter coordinates based on hour
-    spc_coords_df['hour'] = spc_coords_df['time'].apply(lambda x: x.hour)
-    filtered_coords_df = spc_coords_df[(spc_coords_df['hour'] == hour)].drop(
-        columns=['hour'])
-
-    return filtered_coords_df
-
-
-# test_with_g18 = convertGSEkmGSMRe(
-# f'C:/Users/sarah.auriemma/Desktop/Data_new/g18/orb/2022_08/dn_ephe-l2
-# -orb1m_g18_d{date_str_for_filesearch}_v0-0-3.nc', hour)
-# print(test_with_g18)
-
 def process_sat_data_inputs(args):
     """
         Process the satellite data files based on the provided command-line
@@ -344,8 +313,14 @@ def process_sat_data_inputs(args):
 
     for satellite_name, satellite_file in satellites.items():
         if satellite_file:
-            satellite_data = convert_GSE(satellite_file, hour)
+            if satellite_name == 'gk2a':
+                satellite_data = convert_GSE_from_GK2A_csv(satellite_file,
+                                                           hour)
+            else:
+                satellite_data = convert_GSE(satellite_file, hour)
+
             satellites_data[satellite_name] = satellite_data
+
             print(f"Data for {satellite_name}:")
             print(satellite_data)  # Print the data for each satellite
         else:
@@ -410,7 +385,6 @@ def process_time_range(satellites_data, date_str, hour, start_minute,
     # print(coordinates_dict)
     return coordinates_dict
 
-
 def process_single_minute(satellites_data, date_str, hour, minute):
     """
     Output the data for each satellite at a single minute.
@@ -437,7 +411,6 @@ def process_single_minute(satellites_data, date_str, hour, minute):
 
     # print(coordinates_dict)
     return coordinates_dict
-
 
 def main():
     args = parse_arguments()

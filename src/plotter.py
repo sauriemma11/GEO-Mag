@@ -637,23 +637,6 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     # Show the plot (optional)
     plt.show()
 
-
-def dual_half_circle(center, radius, angle=0, ax=None, colors=('w', 'k'),
-                     **kwargs):
-    """
-	Add two half circles to the axes *ax* (or the current axes) with the
-	specified facecolors *colors* rotated at *angle* (in degrees).
-	"""
-    if ax is None:
-        ax = plt.gca()
-    theta1, theta2 = angle, angle + 180
-    w1 = Wedge(center, radius, theta1, theta2, fc=colors[1], **kwargs)
-    w2 = Wedge(center, radius, theta2, theta1, fc=colors[0], **kwargs)
-    for wedge in [w1, w2]:
-        ax.add_artist(wedge)
-    return [w1, w2]
-
-
 def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                                                           solar_wind_pressure,
                                                           imf_bz,

@@ -505,16 +505,16 @@ def plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1,
 # print(goes_data.dtype)
 
 g16_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2022_08/dn_magn-l2'
-    '-avg1m_g16_d20220815_v2-0-2.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g16_d20230227_v2-0-2.nc')
 goes18coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2022_08/dn_magn-l2'
-    '-avg1m_g18_d20220815_v2-0-2.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g18_d20230227_v2-0-2.nc')
 goes17coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2022_08/dn_magn-l2'
-    '-avg1m_g17_d20220815_v2-0-2.nc')
-
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g17_d20230227_v2-0-2.nc')
+# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230227_b_gse.nc')
 
 goes_time_fromnc = goes_epoch_to_datetime(goes18coloc_dataset['time'][:])
 
