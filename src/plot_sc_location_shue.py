@@ -125,43 +125,84 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def load_sosmag_positional_data(start_date_str, end_date_str):
+def load_sosmag_positional_data(timestamp_str):
     """
-    Load SOSMAG/GK2A positional data.
+    Load and return SOSMAG/GK2A positional data for a specific timestamp.
 
     Parameters:
-    start_date_str (str): Start date in 'YYYY-MM-DD HH:MM:SS' format.
-    end_date_str (str): End date in 'YYYY-MM-DD HH:MM:SS' format.
+    timestamp_str (str): Timestamp in 'YYYY-MM-DD HH:MM:SS' format.
 
     Returns:
     pandas.DataFrame: Dataframe containing the positional data.
     """
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d %H:%M:%S')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M')
 
-    trange = [start_date.strftime('%Y-%m-%d %H:%M:%S'),
-              end_date.strftime('%Y-%m-%d %H:%M:%S')]
+    start_time = timestamp
+    end_time = timestamp + timedelta(minutes=1)
+
+    trange = [start_time.strftime('%Y-%m-%d %H:%M:%S'),
+              end_time.strftime('%Y-%m-%d %H:%M:%S')]
 
     sosmag_load(trange=trange, datatype='1m')
 
     data_types = list(pytplot.data_quants.keys())
     data_types_array = np.array(data_types)
 
-    # Assuming 'pos' is the positional data and always at a specific index
+    # 'pos' is the positional data and always at the same index
     tvar = data_types_array[2] if len(data_types_array) > 2 else None
 
     if tvar:
         # Extracting data from pytplot's data structure
         positional_data = pytplot.data_quants[tvar].to_pandas()
-        print(f'Loaded positional data for {start_date} to {end_date}.')
+        print(f'Loaded GK2A positional data for {timestamp_str}')
         return positional_data
     else:
-        print("Positional data not available for the selected dates.")
+        print(f"GK2A positional data not available for {timestamp_str}")
         return None
 
 
+def average_of_minute_timestamp_of_GK2A(df):
+    """
+    Calculate the average of the first and the middle data points in a
+    DataFrame.
+
+    This function is designed to work with a DataFrame where each row
+    represents
+    a timestamp of GK2A positional data. It calculates the average of the data
+    at the first timestamp and the data at the middle timestamp of the
+    DataFrame.
+
+    Parameters:
+    df (pandas.DataFrame): DataFrame containing the positional data,
+                           with each row representing a timestamp.
+
+    Returns:
+    pandas.Series: A series containing the average of the first and middle
+    data points.
+                   Returns None if the DataFrame is empty.
+
+    Note:
+    The function assumes that the DataFrame has an even number of rows. If
+    the number
+    of rows is odd, the function will use the lower middle row for the
+    calculation.
+    """
+    if df.empty:
+        print("The DataFrame is empty.")
+        return None
+
+    length_of_df = len(df.index)
+    halfway_of_df = length_of_df // 2
+
+    first_timestamp_data = df.iloc[0]
+    middle_timestamp_data = df.iloc[halfway_of_df]
+    average_data = (first_timestamp_data + middle_timestamp_data) / 2
+    return average_data
+
+
 print(
-    load_sosmag_positional_data('2023-02-27 10:00:00', '2023-02-27 11:00:00'))
+    average_of_minute_timestamp_of_GK2A(
+        load_sosmag_positional_data('2023-02-27 11:00')))
 
 
 def get_omni_values(date_str, hour, startminute, endminute):
