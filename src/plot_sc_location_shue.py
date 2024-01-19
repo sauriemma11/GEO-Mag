@@ -9,6 +9,8 @@ import spacepy.time as spt
 import spacepy.omni as omni
 from datetime import datetime, timedelta
 import os
+import pytplot
+from pyspedas import sosmag_load
 
 if not "CDF_LIB" in os.environ:
     base_dir = "C:/Scripts/cdf3.9.0"
@@ -121,6 +123,45 @@ def parse_arguments():
                         required=True)
 
     return parser.parse_args()
+
+
+def load_sosmag_positional_data(start_date_str, end_date_str):
+    """
+    Load SOSMAG/GK2A positional data.
+
+    Parameters:
+    start_date_str (str): Start date in 'YYYY-MM-DD HH:MM:SS' format.
+    end_date_str (str): End date in 'YYYY-MM-DD HH:MM:SS' format.
+
+    Returns:
+    pandas.DataFrame: Dataframe containing the positional data.
+    """
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d %H:%M:%S')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d %H:%M:%S')
+
+    trange = [start_date.strftime('%Y-%m-%d %H:%M:%S'),
+              end_date.strftime('%Y-%m-%d %H:%M:%S')]
+
+    sosmag_load(trange=trange, datatype='1m')
+
+    data_types = list(pytplot.data_quants.keys())
+    data_types_array = np.array(data_types)
+
+    # Assuming 'pos' is the positional data and always at a specific index
+    tvar = data_types_array[2] if len(data_types_array) > 2 else None
+
+    if tvar:
+        # Extracting data from pytplot's data structure
+        positional_data = pytplot.data_quants[tvar].to_pandas()
+        print(f'Loaded positional data for {start_date} to {end_date}.')
+        return positional_data
+    else:
+        print("Positional data not available for the selected dates.")
+        return None
+
+
+print(
+    load_sosmag_positional_data('2023-02-27 10:00:00', '2023-02-27 11:00:00'))
 
 
 def get_omni_values(date_str, hour, startminute, endminute):
@@ -459,6 +500,5 @@ def main():
                                                           imf_bz,
                                                           timestamp_for_OMNI_title)
 
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
