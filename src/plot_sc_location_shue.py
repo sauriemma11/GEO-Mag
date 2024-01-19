@@ -451,7 +451,7 @@ def main():
                                                   end_minute)
 
     # print('TIMESTAMP: ', timestamp_notnan)
-    imf_bz, solar_wind_pressure = -13.75, 6.86
+    # imf_bz, solar_wind_pressure = -13.75, 6.86
 
     # Now, you can use the plotting function from plotting.py
     plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
