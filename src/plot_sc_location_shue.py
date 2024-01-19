@@ -49,6 +49,7 @@ from cdasws.datarepresentation import DataRepresentation as dr
 # variables = cdas.get_variables('OMNI_HRO_1MIN')
 # for variable in variables:
 #     print(variable['Name'], " : ", variable['LongDescription'])
+
 # # BZ_GSM, Pressure,
 # print("...")
 # variables = cdas.get_variables('OMNI2_H0_MRG1HR')
@@ -57,9 +58,12 @@ from cdasws.datarepresentation import DataRepresentation as dr
 # var_names = ['BZ_GSE1800', 'BZ_GSM1800', 'Pressure1800']
 
 # var_names = ['BZ_GSM', 'Pressure']
-# data = cdas.get_data('OMNI_HRO_1MIN', var_names, '2023-02-26T21:30:00Z',
-#                      '2023-02-26T21:59:00Z', dataRepresentation=dr.XARRAY)[1]
 
+# data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', '2023-02-26T00:00:00Z',
+#                      '2023-02-27T00:00:00Z', dataRepresentation=dr.XARRAY)[1]
+# print(data)
+# plt.plot(data.Epoch.values, data.SYM_H.values)
+# plt.show()
 
 # print(data)
 # print(type(data))
@@ -143,6 +147,20 @@ def get_omni_values(date_str, hour, startminute, endminute):
     data = cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure'], start_time,
                          end_time, dataRepresentation=dr.XARRAY)[1]
 
+    pressure_values = data.Pressure.values
+    average_pressure = np.nanmean(pressure_values)
+    max_pressure = np.nanmax(pressure_values)
+    min_pressure = np.nanmin(pressure_values)
+
+    print('BZ_imf: ')
+    print(data.BZ_GSM.values)
+    print('Pressure: ')
+    print(pressure_values)
+
+    print(f"Average Pressure: {average_pressure}")
+    print(f"Maximum Pressure: {max_pressure}")
+    print(f"Minimum Pressure: {min_pressure}")
+
     bz_imf = data.BZ_GSM.values[
         0] if 'BZ_GSM' in data and data.BZ_GSM.values.size > 0 else np.nan
     sw_pressure = data.Pressure.values[
@@ -206,7 +224,6 @@ def apply_GSE_nparraystack(pos):
 
     return np.column_stack((x, y, z))
 
-
 def apply_gse_to_earth_to_dict(coordinates_dict):
     transformed_coordinates = {}
     for satellite, coords in coordinates_dict.items():
@@ -242,6 +259,7 @@ def convert_GSE_from_GK2A_csv(spc_coords_file, hour):
     spc_coords = spc_coords[spc_coords['time'].dt.hour == hour]
 
     x, y, z = spc_coords['0'], spc_coords['1'], spc_coords['2']
+    # x, y, z = -14662.438, 35796.366, -16770.182
 
     spc_coords_df = pd.DataFrame(
         {'time': spc_coords['time'], 'X': x, 'Y': y, 'Z': z})
@@ -327,7 +345,6 @@ def process_sat_data_inputs(args):
             print(f"No file provided for {satellite_name}.")
 
     return satellites_data
-
 
 def user_selection_criteria(satellites_data, date_str, hour):
     """
@@ -433,7 +450,8 @@ def main():
     imf_bz, solar_wind_pressure = get_omni_values(date_str, hour, start_minute,
                                                   end_minute)
 
-    # imf_bz, solar_wind_pressure = -12, 6.0
+    # print('TIMESTAMP: ', timestamp_notnan)
+    imf_bz, solar_wind_pressure = -13.75, 6.86
 
     # Now, you can use the plotting function from plotting.py
     plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,

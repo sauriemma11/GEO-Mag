@@ -666,11 +666,21 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
     #     ax.plot(coords['X'] / RE_EARTH, coords['Y'] / RE_EARTH, 'o',
     #     label=satellite)
 
-    # Plot spacecraft locations with modified Y-axis
     for satellite, coords in transformed_dict.items():
-        # Recalculate Y as the radial distance in the Y-Z plane
+        if satellite == 'g17':
+            color = g17_color
+        elif satellite == 'g18':
+            color = g18_color
+        elif satellite == 'gk2a':
+            color = sosmag_color
+        elif satellite == 'g16':
+            color = g16_color
+        else:
+            color = 'gray'  # Default color
+
         modified_Y = np.sqrt(coords['Y'] ** 2 + coords['Z'] ** 2) / RE_EARTH
-        ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite)
+        ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite,
+                color=color)
 
     # Calculate and plot the magnetopause using the Shue et al. (1997) model
     sw_params = {'P': solar_wind_pressure, 'Bz': imf_bz}
@@ -684,6 +694,9 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
     ax.set_xlim(-10, 10)
     ax.set_ylim(-10, 10)
 
+    ax.set_yticks(ax.get_yticks()[::2])
+    ax.set_yticks(ax.get_xticks()[::2])
+
     annotation_text = f"IMF Bz: {imf_bz:.2f} nT\nSolar Wind Pressure: " \
                       f"{solar_wind_pressure:.2f} nPa"
     ax.annotate(annotation_text, xy=(0.05, 0.05), xycoords='axes fraction',
@@ -691,15 +704,18 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                 bbox=dict(boxstyle="round,pad=0.3", edgecolor="black",
                           facecolor="white"))
 
-    # Add labels and legend
     ax.set_xlabel('X [Re]')
     # ax.set_ylabel('Y [Re]')
     ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
 
-    ax.legend()
+    # move legend outside plot to the right
+    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.subplots_adjust(right=0.85)  # make room for legend
+
+    # add title
     time_title = f"{timestamp_for_OMNI_title} UTC"
     title = f"Spacecraft Positions (GSE) - {time_title}"
-    plt.title(title)
+    plt.title(title, pad=20)
 
     plt.show()
 

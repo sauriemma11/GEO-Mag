@@ -369,3 +369,72 @@ def mean_and_std_dev(data_1, data_2):
     std_dev = np.nanstd(differences)
 
     return mean_diff, std_dev
+
+
+def find_data_errors(data, window=5, threshold=5):
+    """
+    Finds erroneous data points by flagging outliers that are a certain number
+    of median absolute deviations away from the median of their neighbors.
+
+    Parameters:
+    data (np.array): The dataset to be checked for errors.
+    window (int): The number of neighboring points to consider for each check.
+    threshold (float): The number of median absolute deviations from the median
+                       which will be considered an outlier.
+
+    Returns:
+    List[int]: A list of indices where the data points are considered outliers.
+    """
+
+    if window % 2 == 0 or window < 1:
+        raise ValueError("Window size must be odd and greater than 0")
+
+    # Pad the data at the beginning and end to handle the window at edges
+    padded_data = np.pad(data, (window // 2, window // 2), mode='median')
+
+    # List to hold the indices of outliers
+    outliers = []
+
+    # Calculate the median and median absolute deviation
+    for i in range(window // 2, len(data) + window // 2):
+        # Create the windowed subset of the data
+        window_data = padded_data[i - window // 2: i + window // 2 + 1]
+
+        # Calculate the median of the window
+        local_median = np.median(window_data)
+
+        # Calculate the median absolute deviation
+        mad = np.median(np.abs(window_data - local_median))
+
+        # Check if the data point is an outlier based on the MAD
+        if mad == 0:  # Avoid division by zero
+            continue
+        if np.abs(data[i - window // 2] - local_median) / mad > threshold:
+            outliers.append(i - window // 2)
+
+    return outliers
+
+
+def fix_data_error_with_nan(data, index):
+    """
+    Marks an erroneous data point as NaN.
+
+    Parameters:
+    data (np.array): The dataset containing the erroneous point.
+    index (int): The index of the erroneous data point to be marked as NaN.
+
+    Returns:
+    np.array: The dataset with the specified point set to NaN.
+    """
+
+    # Ensure the index is within the proper range
+    if index < 0 or index >= len(data):
+        raise ValueError("Index out of range.")
+
+    # Set the erroneous point to NaN
+    data[index] = np.nan
+    return data
+
+# Example usage:
+# outliers = find_data_errors(goes16_data[:, 2])
+# print("Outlier indices:", outliers)

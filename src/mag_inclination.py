@@ -4,9 +4,12 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import netCDF4 as nc
 import pandas as pd
+import datetime as dtm
 import os
 from cdasws import CdasWs
 from cdasws.datarepresentation import DataRepresentation
+from utils import find_data_errors, fix_data_error_with_nan
+from cdasws.datarepresentation import DataRepresentation as dr
 
 cdas = CdasWs()
 if not "CDF_LIB" in os.environ:
@@ -345,8 +348,10 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data,
     # GOES, red
     # SOSMAG, blue
 
-    ax1.plot(goes_time, np.degrees(goes_theta), label='GOES', color='red')
-    ax1.plot(goes_time, np.degrees(gk2a_theta), label='SOSMAG', color='blue')
+    ax1.plot(goes_time, np.degrees(goes_theta), label='GOES', color='red',
+             linewidth=1)
+    ax1.plot(goes_time, np.degrees(gk2a_theta), label='SOSMAG', color='blue',
+             linewidth=1)
 
     ax1.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
     ax1.set_ylabel('θ [degrees]')
@@ -385,22 +390,25 @@ def plot_magnetic_inclination_over_time_3sc(goes_time, goes17_data,
     # SOSMAG, blue
     # G16, green
 
-    ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red')
-    ax1.plot(goes_time, np.degrees(goes18_theta), label='G18', color='orange')
-    ax1.plot(goes_time, np.degrees(gk2a_theta), label='SOSMAG', color='blue')
+    ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red',
+             linewidth=1)
+    ax1.plot(goes_time, np.degrees(goes18_theta), label='G18', color='orange',
+             linewidth=1)
+    ax1.plot(goes_time, np.degrees(gk2a_theta), label='GK2A', color='blue',
+             linewidth=1)
     if goes16_data is not None:
         ax1.plot(goes_time, np.degrees(goes16_theta), label='G16',
-                 color='green')
+                 color='green', linewidth=1)
 
     ax1.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
     ax1.set_ylabel('θ [degrees]')
-    ax1.set_ylim(0, 90)
+    ax1.set_ylim(-45, 90)
 
     ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
 
     ax1.legend()
-
+    # ax1.grid(True)
     plt.tight_layout()
     plt.show()
 
@@ -417,47 +425,88 @@ def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
     plt.show()
 
 
-def plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1,
+def plot_BGSE_fromdata_ontop(timedataset, spacecraftdata1, spacecraftdata2,
+                             whatspacecraft1,
                              whatspacecraft2, whatspacecraft3=None,
                              spacecraftdata3=None, whatspacecraft4=None,
-                             spacecraftdata4=None):
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+                             spacecraftdata4=None, date_str=None):
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
 
-    # ax1.set_title(f'{whatspacecraft} B_GSE')
-    ax1.plot(spacecraftdata1[:, 0], label=f'{whatspacecraft1} X', color='red')
-    ax1.plot(spacecraftdata2[:, 0], label=f'{whatspacecraft2} X',
-             color='orange')
+    ax1.set_title(f'B field (GSE) - {date_str}')
+    ax1.plot(goes_time_fromnc, spacecraftdata1[:, 0],
+             label=f'{whatspacecraft1}', color='red', linewidth=1)
+    ax1.plot(goes_time_fromnc, spacecraftdata2[:, 0],
+             label=f'{whatspacecraft2}', color='orange', linewidth=1)
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter(''))
+    ax1.tick_params(axis='x', which='both', length=6, labelbottom=False)
 
-    ax2.plot(spacecraftdata1[:, 1], label=f'{whatspacecraft1} Y', color='red')
-    ax2.plot(spacecraftdata2[:, 1], label=f'{whatspacecraft2} Y',
-             color='orange')
+    ax2.plot(goes_time_fromnc, spacecraftdata1[:, 1],
+             label=f'{whatspacecraft1} Y', color='red', linewidth=1)
+    ax2.plot(goes_time_fromnc, spacecraftdata2[:, 1],
+             label=f'{whatspacecraft2} Y', color='orange', linewidth=1)
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter(''))
+    ax2.tick_params(axis='x', which='both', length=6, labelbottom=False)
 
-    ax3.plot(spacecraftdata1[:, 2], label=f'{whatspacecraft1} Z', color='red')
-    ax3.plot(spacecraftdata2[:, 2], label=f'{whatspacecraft2} Z',
-             color='orange')
+    ax3.plot(goes_time_fromnc, spacecraftdata1[:, 2],
+             label=f'{whatspacecraft1} Z', color='red', linewidth=1)
+    ax3.plot(goes_time_fromnc, spacecraftdata2[:, 2],
+             label=f'{whatspacecraft2} Z', color='orange', linewidth=1)
+    ax3.tick_params(axis='x', which='both', length=6, labelbottom=False)
 
     if spacecraftdata3 is not None:
-        ax1.plot(spacecraftdata3[:, 0], label=f'{whatspacecraft3} X',
-                 color='blue')
-        ax2.plot(spacecraftdata3[:, 1], label=f'{whatspacecraft3} Y',
-                 color='blue')
-        ax3.plot(spacecraftdata3[:, 2], label=f'{whatspacecraft3} Z',
-                 color='blue')
+        ax1.plot(goes_time_fromnc, spacecraftdata3[:, 0],
+                 label=f'{whatspacecraft3}', color='blue', linewidth=1)
+        ax2.plot(goes_time_fromnc, spacecraftdata3[:, 1],
+                 label=f'{whatspacecraft3} Y', color='blue', linewidth=1)
+        ax3.plot(goes_time_fromnc, spacecraftdata3[:, 2],
+                 label=f'{whatspacecraft3} Z', color='blue', linewidth=1)
 
     if spacecraftdata4 is not None:
-        ax1.plot(spacecraftdata4[:, 0], label=f'{whatspacecraft4} X',
-                 color='green')
-        ax2.plot(spacecraftdata4[:, 1], label=f'{whatspacecraft4} Y',
-                 color='green')
-        ax3.plot(spacecraftdata4[:, 2], label=f'{whatspacecraft4} Z',
-                 color='green')
+        ax1.plot(goes_time_fromnc, spacecraftdata4[:, 0],
+                 label=f'{whatspacecraft4}', color='green', linewidth=1)
+        ax2.plot(goes_time_fromnc, spacecraftdata4[:, 1],
+                 label=f'{whatspacecraft4} Y', color='green', linewidth=1)
+        ax3.plot(goes_time_fromnc, spacecraftdata4[:, 2],
+                 label=f'{whatspacecraft4} Z', color='green', linewidth=1)
+
+    # fix time x-axis labels
+    # ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    plt.setp(ax4.get_xticklabels())
+    # plt.subplots_adjust(hspace=0.4, wspace=0.4)
+    # plt.rc('font', size=12)
+
+    # Set the DateFormatter for the x-axis of ax3
+    ax4.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    plt.subplots_adjust(hspace=0.075, right=0.8)
+
+    # Set ticks inside for all subplots
+    for ax in [ax1, ax2, ax3, ax4]:
+        # ax.grid(True, linestyle='--', linewidth=0.5, color='white')
+        ax.tick_params(direction='inout', which='both')
+        ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+
+    # Set legend for all subplots outside of the plot area
+    ax1.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    # ax2.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    # ax3.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    # Set Y-axis labels
+    ax1.set_ylabel('$B_x$ [nT]')
+    ax2.set_ylabel('$B_y$ [nT]')
+    ax3.set_ylabel('$B_z$ [nT]')
+
+    data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', '2023-02-26T00:00:00Z',
+                         '2023-02-26T23:59:00Z', dataRepresentation=dr.XARRAY)[
+        1]
+    sym_h = data.SYM_H.values
+
+    ax4.plot(goes_time_fromnc, sym_h, linewidth=1)
+    ax4.set_ylabel('SYM-H [nT]')
 
     plt.tight_layout()
-    ax1.legend()
-    ax2.legend()
-    ax3.legend()
 
     plt.show()
+
 
 # gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
 # goes_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
@@ -506,15 +555,15 @@ def plot_BGSE_fromdata_ontop(spacecraftdata1, spacecraftdata2, whatspacecraft1,
 
 g16_dataset = nc.Dataset(
     'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g16_d20230227_v2-0-2.nc')
+    '-avg1m_g16_d20230226_v2-0-2.nc')
 goes18coloc_dataset = nc.Dataset(
     'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g18_d20230227_v2-0-2.nc')
+    '-avg1m_g18_d20230226_v2-0-2.nc')
 goes17coloc_dataset = nc.Dataset(
     'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g17_d20230227_v2-0-2.nc')
-# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230227_b_gse.nc')
+    '-avg1m_g17_d20230226_v2-0-2.nc')
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230226_b_gse.nc')
+# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230227_b_gse.nc')
 
 goes_time_fromnc = goes_epoch_to_datetime(goes18coloc_dataset['time'][:])
 
@@ -526,6 +575,7 @@ goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
 
 goes16_bgse_stacked = stack_from_data(g16_dataset['b_gse'])
 goes16_bgse_stacked = fix_nan_for_goes(goes16_bgse_stacked)
+# fix_data_error_with_nan(goes16_bgse_stacked, 1059)
 
 gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
                                      gk2a_dataset['b_ygse'][:],
@@ -537,16 +587,17 @@ gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
 # goes_time = load_pickle_file(goes_pickle_path)['time_min']
 # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
 
-# For plot title, mainly
-date_str = '2022-08-15'
+# For plot title
+date_str = dtm.datetime.strftime(goes_time_fromnc[0], '%Y-%m-%d')
+# date_str = '2022-08-15'
 
 # plot_BGSE_fromdata(goes17_bgse_stacked, 'goes17')
 # plot_BGSE_fromdata(goes18_bgse_stacked, 'goes18')
 
-# plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17', 'G18')
-plot_BGSE_fromdata_ontop(goes17_bgse_stacked, goes18_bgse_stacked, 'G17',
-                         'G18', 'SOSMAG', gk2a_bgse_stacked, 'G16',
-                         goes16_bgse_stacked)
+plot_BGSE_fromdata_ontop(goes_time_fromnc, goes17_bgse_stacked,
+                         goes18_bgse_stacked, 'G17',
+                         'G18', 'GK2A', gk2a_bgse_stacked, 'G16',
+                         goes16_bgse_stacked, date_str)
 
 goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
 # print(goes_VDH)
