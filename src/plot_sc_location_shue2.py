@@ -71,50 +71,55 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_omni_values(date_str, hour, startminute, endminute):
+def get_omni_values(timestamp):
     """
     Get BZ_imf and solar wind pressure from OMNI data.
 
     Parameters:
-        date_str (str): Date in 'YYYY-MM-DD' format.
-        time_input (int or tuple): Single minute or a range of minutes.
-        is_single_minute (bool): Flag indicating if the input is a single
-        minute.
+        timestamp (str): The timestamp in 'YYYYMMDD HH:MM' format.
 
     Returns:
         tuple: (BZ_imf, solar_wind_pressure)
     """
+    # Parsing the timestamp to datetime object
+    dttime = datetime.strptime(timestamp, '%Y%m%d %H:%M')
 
-    if startminute == endminute:
-        start_time = f"{date_str}T{hour}:{startminute}:00Z"
-        end_time = f"{date_str}T{hour}:{endminute + 1}:00Z"
-    else:
-        start_time = f"{date_str}T{hour}:{startminute}:00Z"
-        end_time = f"{date_str}T{hour}:{endminute}:00Z"
+    # Calculating start and end times
+    start_time = dttime - timedelta(minutes=30)
+    end_time = dttime + timedelta(minutes=30)
 
-    data = cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure'], start_time,
-                         end_time, dataRepresentation=dr.XARRAY)[1]
+    # Formatting the start and end times to string
+    start_time_str = start_time.strftime('%Y%m%dT%H:%M:00Z')
+    end_time_str = end_time.strftime('%Y%m%dT%H:%M:00Z')
 
+    data = \
+    cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure'], start_time_str,
+                  end_time_str, dataRepresentation=dr.XARRAY)[1]
+
+    bz_imf_values = data.BZ_GSM.values
     pressure_values = data.Pressure.values
+
     average_pressure = np.nanmean(pressure_values)
     max_pressure = np.nanmax(pressure_values)
     min_pressure = np.nanmin(pressure_values)
 
-    print('BZ_imf: ')
-    print(data.BZ_GSM.values)
-    print('Pressure: ')
-    print(pressure_values)
+    average_imf = np.nanmean(bz_imf_values)
+    max_imf = np.nanmax(bz_imf_values)
+    min_imf = np.nanmin(bz_imf_values)
 
-    print(f"Average Pressure: {average_pressure}")
-    print(f"Maximum Pressure: {max_pressure}")
-    print(f"Minimum Pressure: {min_pressure}")
+    # Displaying the values to the user
+    print("BZ_IMF Values: ", bz_imf_values)
+    print('Max/Min/avg of IMF:', max_imf, min_imf, average_imf)
+    print("Solar Wind Pressure Values: ", pressure_values)
+    print('Max/Min/avg of SW pressure:', max_pressure, min_pressure,
+          average_pressure)
 
-    bz_imf = data.BZ_GSM.values[
-        0] if 'BZ_GSM' in data and data.BZ_GSM.values.size > 0 else np.nan
-    sw_pressure = data.Pressure.values[
-        0] if 'Pressure' in data and data.Pressure.values.size > 0 else np.nan
+    # Asking the user to input the specific values they want to use
+    bz_imf_input = float(input("Enter the BZ_IMF value you want to use: "))
+    sw_pressure_input = float(
+        input("Enter the Solar Wind Pressure value you want to use: "))
 
-    return bz_imf, sw_pressure
+    return bz_imf_input, sw_pressure_input
 
 
 def load_sosmag_positional_data(timestamp_str):
@@ -468,9 +473,10 @@ def transform_spacecraft_data(satellites_data):
 def main():
     args = parse_arguments()
 
-    timestamp_for_OMNI_title = args.timestamp
-    timestampinHHMM = str(timestamp_for_OMNI_title[9:14])
-
+    timestamp_for_OMNI_and_title = args.timestamp
+    timestampinHHMM = str(timestamp_for_OMNI_and_title[9:14])
+    ic(timestamp_for_OMNI_and_title)
+    ic(type(timestamp_for_OMNI_and_title))
     # get gse coords from gk2a longitude
     # gk2a_gse_coords_from_long = transform_longitude_to_GSE(GK2A_LONG,
     # timestampinHHMM)
@@ -481,13 +487,13 @@ def main():
     transformed_dict = transform_spacecraft_data(satellites_data)
     ic(transformed_dict)
 
-    imf_bz, solar_wind_pressure = get_omni_values()
+    imf_bz, solar_wind_pressure = get_omni_values(timestamp_for_OMNI_and_title)
 
     # imf_bz, solar_wind_pressure = -13.75, 6.86
     plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                                                           solar_wind_pressure,
                                                           imf_bz,
-                                                          timestamp_for_OMNI_title)
+                                                          timestamp_for_OMNI_and_title)
 
 
 if __name__ == "__main__":

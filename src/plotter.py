@@ -778,9 +778,9 @@ def plot_sc_and_shue_gk2a_bytimediff(transformed_dict, solar_wind_pressure,
     spp.dual_half_circle((0, 0), 1, ax=ax, fill=True)
 
     # Add GEO circle
-    geo_circle = Circle((0, 0), GEOSTAT, color='red', linestyle='--',
-                        fill=False)
-    ax.add_artist(geo_circle)
+    # geo_circle = Circle((0, 0), GEOSTAT, color='red', linestyle='--',
+    #                     fill=False)
+    # ax.add_artist(geo_circle)
 
     for satellite, coords in transformed_dict.items():
         if satellite == 'g17':
