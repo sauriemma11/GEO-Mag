@@ -6,7 +6,6 @@ import numpy as np
 import spacepy.omni as omni
 import spacepy.time as spt
 from datetime import datetime, timedelta
-
 import utils
 from coord_transform import *
 import matplotlib.pyplot as plt
@@ -34,6 +33,47 @@ g18_color = 'orange'
 sosmag_color = 'blue'
 g16_color = 'green'
 
+def transform_longitude_to_GSE(longitude, utc_time, is_west=False):
+    """
+    Transform the longitude of a geostationary satellite into GSE coordinates.
+
+    Parameters
+    ----------
+    longitude (float): Longitude of the satellite. Positive for East,
+    negative for West.
+    utc_time (str): UTC time in the format 'HH:MM'.
+    is_west (bool): Set to True if the longitude is provided in degrees West.
+
+    Returns
+    -------
+    dict: GSE coordinates of the satellite [km]
+    """
+
+    # Convert West longitude to East longitude if needed
+    if is_west:
+        longitude = 360 - longitude
+
+    # Convert UTC time to angle
+    utc_hour, utc_minute = map(int, utc_time.split(':'))
+    total_utc_hours = utc_hour + utc_minute / 60
+    earth_rotation_degrees_per_hour = 360 / 24
+    earth_rotation_angle = total_utc_hours * earth_rotation_degrees_per_hour
+
+    # Satellite fixed position relative to Greenwich Meridian
+    fixed_longitude = longitude - earth_rotation_angle
+    fixed_longitude_rad = np.radians(fixed_longitude)
+
+    # Calculate GSE coordinates in Earth Radii (RE)
+    x_re = np.cos(fixed_longitude_rad) * GEOSTAT
+    y_re = np.sin(fixed_longitude_rad) * GEOSTAT
+    z_re = 0  # Geostationary satellite, so Z coordinate is ~0
+
+    # Convert coordinates from RE to km
+    x_km = x_re * RE_EARTH
+    y_km = y_re * RE_EARTH
+    z_km = z_re * RE_EARTH  # remains 0
+
+    return {'X': x_km, 'Y': y_km, 'Z': z_km}
 
 def plot_BGSE_fromdata_ontop(goes_time, goes17_spacecraft_data=None,
                              goes18_spacecraft_data=None, whatsc_goes17=None,
@@ -637,6 +677,7 @@ def plot_4_scatter_plots_with_color(g17_mag_data, g17_sub_data, g17_time_list,
     # Show the plot (optional)
     plt.show()
 
+
 def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                                                           solar_wind_pressure,
                                                           imf_bz,
@@ -661,11 +702,6 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                         fill=False)
     ax.add_artist(geo_circle)
 
-    # # Plot spacecraft locations X vs Y:
-    # for satellite, coords in transformed_dict.items():
-    #     ax.plot(coords['X'] / RE_EARTH, coords['Y'] / RE_EARTH, 'o',
-    #     label=satellite)
-
     for satellite, coords in transformed_dict.items():
         if satellite == 'g17':
             color = g17_color
@@ -678,9 +714,13 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
         else:
             color = 'gray'  # Default color
 
-        modified_Y = np.sqrt(coords['Y'] ** 2 + coords['Z'] ** 2) / RE_EARTH
-        ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite,
-                color=color)
+        ax.plot(coords['X'] / RE_EARTH, coords['Y'] / RE_EARTH, 'o',
+                label=satellite, color=color)
+
+        # For X vs R (sqrt(y^2 + z^2)
+        # modified_Y = np.sqrt(coords['Y'] ** 2 + coords['Z'] ** 2) / RE_EARTH
+        # ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite,
+        # color=color)
 
     # Calculate and plot the magnetopause using the Shue et al. (1997) model
     sw_params = {'P': solar_wind_pressure, 'Bz': imf_bz}
@@ -705,8 +745,104 @@ def plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
                           facecolor="white"))
 
     ax.set_xlabel('X [Re]')
-    # ax.set_ylabel('Y [Re]')
-    ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
+    ax.set_ylabel('Y [Re]')
+    # ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
+
+    # move legend outside plot to the right
+    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.subplots_adjust(right=0.85)  # make room for legend
+
+    # add title
+    time_title = f"{timestamp_for_OMNI_title} UTC"
+    title = f"Spacecraft Positions (GSE) - {time_title}"
+    plt.title(title, pad=20)
+
+    plt.show()
+
+
+def plot_sc_and_shue_gk2a_bytimediff(transformed_dict, solar_wind_pressure,
+                                     imf_bz, timestamp_for_OMNI_title):
+    """
+    Plot spacecraft positions with Earth represented by dual half circles
+    and the magnetopause boundary.
+
+    Parameters:
+        transformed_dict (dict): Dictionary containing transformed
+        spacecraft coordinates.
+        solar_wind_pressure (float): Solar wind dynamic pressure in nPa.
+        imf_bz (float): Interplanetary Magnetic Field Bz component in nT.
+    """
+    fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+
+    # Plot Earth with spacepy's dual half circle
+    spp.dual_half_circle((0, 0), 1, ax=ax, fill=True)
+
+    # Add GEO circle
+    geo_circle = Circle((0, 0), GEOSTAT, color='red', linestyle='--',
+                        fill=False)
+    ax.add_artist(geo_circle)
+
+    for satellite, coords in transformed_dict.items():
+        if satellite == 'g17':
+            color = g17_color
+        elif satellite == 'g18':
+            color = g18_color
+        elif satellite == 'gk2a':
+            color = sosmag_color
+        elif satellite == 'g16':
+            color = g16_color
+        else:
+            color = 'gray'  # Default color
+
+        if satellite == 'gk2a':
+            color = sosmag_color
+            # Adjust GK2A's position based on the time difference with G18
+            utc_hour, utc_minute = map(int,
+                                       timestamp_for_OMNI_title.split(' ')[
+                                           1].split(':'))
+            total_utc_hours = utc_hour + utc_minute / 60
+            time_difference = total_utc_hours - 3  # GK2A's local noon at
+            # 03:00 UTC
+            longitude_shift_degrees = time_difference * 15  # 15 degrees per
+            # hour
+            longitude_gk2a = (360 + longitude_shift_degrees) % 360
+            coords = transform_longitude_to_GSE(longitude_gk2a,
+                                                "00:00")  # Recalculate
+            # GK2A's position
+
+        ax.plot(coords['X'] / RE_EARTH, coords['Y'] / RE_EARTH, 'o',
+                label=satellite, color=color)
+
+        # For X vs R (sqrt(y^2 + z^2)
+        # modified_Y = np.sqrt(coords['Y'] ** 2 + coords['Z'] ** 2) / RE_EARTH
+        # ax.plot(coords['X'] / RE_EARTH, modified_Y, 'o', label=satellite,
+        # color=color)
+
+    # Calculate and plot the magnetopause using the Shue et al. (1997) model
+    sw_params = {'P': solar_wind_pressure, 'Bz': imf_bz}
+    # localtimes = np.arange(5, 19.1, 0.5)  # Local times from 5 to 19 in
+    # steps of 0.5
+    # mp_pos = spe.getMagnetopause(sw_params, LTs=localtimes)
+    mp_pos = spe.getMagnetopause(sw_params)
+    ax.plot(mp_pos[0, :, 0], mp_pos[0, :, 1], 'b--')
+
+    # Set plot limits
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-10, 10)
+
+    ax.set_yticks(ax.get_yticks()[::2])
+    ax.set_yticks(ax.get_xticks()[::2])
+
+    annotation_text = f"IMF Bz: {imf_bz:.2f} nT\nSolar Wind Pressure: " \
+                      f"{solar_wind_pressure:.2f} nPa"
+    ax.annotate(annotation_text, xy=(0.05, 0.05), xycoords='axes fraction',
+                fontsize=9, ha='left', va='bottom',
+                bbox=dict(boxstyle="round,pad=0.3", edgecolor="black",
+                          facecolor="white"))
+
+    ax.set_xlabel('X [Re]')
+    ax.set_ylabel('Y [Re]')
+    # ax.set_ylabel('R [Re] ($\sqrt{Y^2 + Z^2}$)')
 
     # move legend outside plot to the right
     ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
