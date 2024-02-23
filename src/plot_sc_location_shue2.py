@@ -23,6 +23,7 @@ RE_EARTH = 6371  # Radius of Earth in km
 GEOSTAT = 6.6  # geostationary orbit - Re
 GK2A_LONG = 128.2  # GK2A consistent longitude, EAST
 G18_LONG = 137.0  # WEST
+G17_LONG = 137.2  # WEST until 1/10/23
 
 from cdasws import CdasWs
 from cdasws.datarepresentation import DataRepresentation as dr
@@ -342,7 +343,7 @@ def process_sat_data_inputs(args):
     """
     Process the satellite data files based on the provided command-line
     arguments.
-    Calculate GK2A position based on the longitude difference from G18.
+    Calculate GK2A position based on the longitude difference from G18 or G17.
 
     Parameters:
         args (argparse.Namespace): Parsed command-line arguments.
@@ -371,34 +372,39 @@ def process_sat_data_inputs(args):
     if args.gk2a:
         # Extract G18's GSE coordinates from satellites_data
         g18_gse_coords = satellites_data.get('g18')
+        g17_gse_coords = satellites_data.get('g17')
 
         if g18_gse_coords is not None:
-            # Calculate the longitudinal difference in degrees
-            longitudinal_difference = GK2A_LONG - (
-                    360 - G18_LONG)  # Convert G18's longitude to degrees
-            # East and add to GK2A's
-
-            # Convert the longitudinal difference to radians
-            longitudinal_difference_rad = np.radians(longitudinal_difference)
-
-            # Assuming G18's position is the reference, calculate GK2A's GSE
-            # position
-            gk2a_gse_coords = {
-                'X': g18_gse_coords['X'] * np.cos(
-                    longitudinal_difference_rad) - g18_gse_coords[
-                         'Y'] * np.sin(longitudinal_difference_rad),
-                'Y': g18_gse_coords['X'] * np.sin(
-                    longitudinal_difference_rad) + g18_gse_coords[
-                         'Y'] * np.cos(longitudinal_difference_rad),
-                'Z': g18_gse_coords['Z']  # Assuming Z remains the same
-            }
-            satellites_data['gk2a'] = gk2a_gse_coords
+            reference_coords = g18_gse_coords
+            reference_long = 360 - G18_LONG  # Convert G18's longitude to
+            # degrees East
+        elif g17_gse_coords is not None:
+            reference_coords = g17_gse_coords
+            reference_long = 360 - G17_LONG  # Convert G17's longitude to
+            # degrees East
         else:
             print(
-                "G18 data is required for calculating GK2A's position but is "
-                "not available.")
+                "Neither G18 nor G17 data is available for calculating "
+                "GK2A's position.")
+            return satellites_data
 
-    ic(satellites_data)
+            # Calculate the longitudinal difference in degrees
+        longitudinal_difference = GK2A_LONG - reference_long
+
+        # Convert the longitudinal difference to radians
+        longitudinal_difference_rad = np.radians(longitudinal_difference)
+
+        # Calculate GK2A's GSE position assuming the reference satellite's
+        # position
+        gk2a_gse_coords = {
+            'X': reference_coords['X'] * np.cos(longitudinal_difference_rad) -
+                 reference_coords['Y'] * np.sin(longitudinal_difference_rad),
+            'Y': reference_coords['X'] * np.sin(longitudinal_difference_rad) +
+                 reference_coords['Y'] * np.cos(longitudinal_difference_rad),
+            'Z': reference_coords['Z']  # Assuming Z remains the same
+        }
+        satellites_data['gk2a'] = gk2a_gse_coords
+
     return satellites_data
 
 

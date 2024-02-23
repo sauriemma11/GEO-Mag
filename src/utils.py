@@ -2,6 +2,7 @@ import numpy as np
 import datetime as dt
 from typing import List, Tuple
 import pandas as pd
+import re
 
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
@@ -414,6 +415,21 @@ def find_data_errors(data, window=5, threshold=5):
 
     return outliers
 
+
+def format_units(units):
+    """
+    Format the units string for LaTeX-style exponentiation.
+
+    Parameters:
+    units (str): The original units string.
+
+    Returns:
+    str: The formatted units string.
+    """
+    formatted_units = re.sub(r'-(\d+)', r'^{-\1}', units)
+    # Wrap each unit with LaTeX math mode symbols
+    formatted_units = formatted_units.replace(' ', '$ $')
+    return f'${formatted_units}$'
 
 def fix_data_error_with_nan(data, index):
     """

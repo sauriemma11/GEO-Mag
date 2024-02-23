@@ -12,12 +12,14 @@ import os
 import pytplot
 from pyspedas import sosmag_load
 
+
 if not "CDF_LIB" in os.environ:
     base_dir = "C:/Scripts/cdf3.9.0"
     os.environ["CDF_BASE"] = base_dir
     os.environ["CDF_BIN"] = base_dir + "/bin"
     os.environ["CDF_LIB"] = base_dir + "/lib"
-from plotter import plot_spacecraft_positions_with_earth_and_magnetopause
+from plotter import plot_spacecraft_positions_with_earth_and_magnetopause, \
+    plot_sc_and_shue_gk2a_bytimediff
 
 RE_EARTH = 6378
 GEOSTAT = 6.6  # geostationary orbit - Re
@@ -111,15 +113,19 @@ def parse_arguments():
                         help="Path to g18 orb information (must be .nc file)",
                         required=False)
 
-    # TODO: change file type for gk2a since orb location info is different
-    parser.add_argument('--gk2a',
-                        type=str,
-                        help="Path to gk2a orb information",
-                        required=False)
+    # Providing the orb info manually:
+    # parser.add_argument('--gk2a',
+    #                     type=str,
+    #                     help="Path to gk2a orb information",
+    #                     required=False)
+
+    # Script will use pyspedas to get orb info:
+    parser.add_argument("--gk2a", action='store_true',
+                        help="Flag to indicate whether to plot gk2a")
 
     parser.add_argument('--timestamp',
                         type=str,
-                        help="time stamp (as a string) ex. YYYYMMDDHH",
+                        help="time stamp (as a string) ex. YYYYMMDD HH:MM",
                         required=True)
 
     return parser.parse_args()
@@ -198,11 +204,6 @@ def average_of_minute_timestamp_of_GK2A(df):
     middle_timestamp_data = df.iloc[halfway_of_df]
     average_data = (first_timestamp_data + middle_timestamp_data) / 2
     return average_data
-
-
-print(
-    average_of_minute_timestamp_of_GK2A(
-        load_sosmag_positional_data('2023-02-27 11:00')))
 
 
 def get_omni_values(date_str, hour, startminute, endminute):
@@ -348,18 +349,30 @@ def convert_GSE_from_GK2A_csv(spc_coords_file, hour):
 
     return spc_coords_df
 
-def convert_GSE(spc_coords_file, hour):
+
+def convert_and_filter_gse_by_timestamp(spc_coords_file, timestamp):
     """
-    Convert GSE coordinates to GSM coordinates and filter based on the
-    specified hour.
+    Convert GSE (Geocentric Solar Ecliptic) coordinates to GSM (Geocentric
+    Solar Magnetospheric)
+    coordinates and filter the data based on a specific timestamp.
+
+    This function reads GSE coordinates from a .nc (NetCDF) file, converts
+    them to GSM coordinates,
+    and filters these coordinates to include data only at the specified
+    timestamp.
 
     Parameters:
-        spc_coords_file (str): Path to the spc_coords file (must be .nc file).
-        hour (int): Hour value to filter the coordinates.
+        spc_coords_file (str): Path to the spc_coords file (must be a .nc
+        file).
+        timestamp_str (str): Timestamp in the format 'YYYYMMDD HH:MM' to
+        filter the coordinates.
 
     Returns:
         pandas.DataFrame: DataFrame containing columns [time, Xgsm, Ygsm,
-        Zgsm] with units being positional data cartesian GSM in RE.
+        Zgsm],
+                          where Xgsm, Ygsm, Zgsm are the GSM coordinates in
+                          RE units.
+                          The 'time' column contains datetime objects.
     """
 
     spc_coords = nc.Dataset(spc_coords_file)
@@ -368,22 +381,23 @@ def convert_GSE(spc_coords_file, hour):
     tickz = spt.Ticktock(spcCoords_time, 'UTC')
 
     x, y, z = spc_coords['gse_xyz'][:, 0], spc_coords['gse_xyz'][:, 1], \
-    spc_coords['gse_xyz'][:, 2]
+        spc_coords['gse_xyz'][:, 2]
     pos_gse = np.column_stack((x, y, z))
     pos_gse_coords = spcoords.Coords(pos_gse, 'GSE', 'car', ticks=tickz)
-    pos_x_gse, pos_y_gse, pos_z_gse = pos_gse_coords.x[:], pos_gse_coords.y[
-                                                           :], \
-        pos_gse_coords.z[
-                                                               :]
+
+    # pos_x_gse, pos_y_gse, pos_z_gse = pos_gse_coords.x[:],
+    # pos_gse_coords.y[:], pos_gse_coords.z[:]
+    # spc_coords_df = pd.DataFrame({'time': spcCoords_time, 'X': pos_x_gse,
+    # 'Y': pos_y_gse, 'Z': pos_z_gse})
+    # Filter coordinates based on hour
+    # spc_coords_df['hour'] = spc_coords_df['time'].apply(lambda x: x.hour)
+    # filtered_coords_df = spc_coords_df[(spc_coords_df['hour'] ==
+    # hour)].drop(columns=['hour'])
 
     spc_coords_df = pd.DataFrame(
-        {'time': spcCoords_time, 'X': pos_x_gse, 'Y': pos_y_gse,
-         'Z': pos_z_gse})
-
-    # Filter coordinates based on hour
-    spc_coords_df['hour'] = spc_coords_df['time'].apply(lambda x: x.hour)
-    filtered_coords_df = spc_coords_df[(spc_coords_df['hour'] == hour)].drop(
-        columns=['hour'])
+        {'time': spcCoords_time, 'X': pos_gse_coords.x, 'Y': pos_gse_coords.y,
+         'Z': pos_gse_coords.z})
+    filtered_coords_df = spc_coords_df[spc_coords_df['time'] == timestamp]
 
     return filtered_coords_df
 
@@ -399,30 +413,30 @@ def process_sat_data_inputs(args):
             dict: Dictionary containing satellite data with satellite names
             as keys.
     """
-    timestamp = datetime.strptime(args.timestamp, '%Y%m%d%H')
+    timestamp = datetime.strptime(args.timestamp, '%Y%m%d %H:%M')
     date_str_for_filesearch = args.timestamp[:8]
-    hour = timestamp.hour
 
     satellites_data = {}
+
+    # Process gk2a data if the flag is set
+    if args.gk2a:
+        satellite_data = load_sosmag_positional_data(timestamp)
+        gk2a_data = average_of_minute_timestamp_of_GK2A(satellite_data)
+        satellites_data['gk2a'] = np.vstack(gk2a_data.to_numpy())
+
+    # List of other satellites
     satellites = {
         'g16': args.g16,
         'g17': args.g17,
-        'g18': args.g18,
-        'gk2a': args.gk2a
+        'g18': args.g18
     }
 
     for satellite_name, satellite_file in satellites.items():
         if satellite_file:
-            if satellite_name == 'gk2a':
-                satellite_data = convert_GSE_from_GK2A_csv(satellite_file,
-                                                           hour)
-            else:
-                satellite_data = convert_GSE(satellite_file, hour)
-
-            satellites_data[satellite_name] = satellite_data
-
-            print(f"Data for {satellite_name}:")
-            print(satellite_data)  # Print the data for each satellite
+            satellite_data = convert_and_filter_gse_by_timestamp(
+                satellite_file, args.timestamp)
+            satellites_data[satellite_name] = np.vstack(
+                satellite_data.to_numpy())
         else:
             print(f"No file provided for {satellite_name}.")
 
@@ -511,35 +525,87 @@ def process_single_minute(satellites_data, date_str, hour, minute):
     # print(coordinates_dict)
     return coordinates_dict
 
+
+def transform_spacecraft_data(satellites_data):
+    """
+    Transform spacecraft data into a dictionary format for plotting.
+
+    Parameters:
+        satellites_data (numpy.ndarray): Array containing the stacked
+        spacecraft data.
+                                        Expected format: Each row represents
+                                        a satellite,
+                                        with columns for X, Y,
+                                        and Z coordinates.
+
+    Returns:
+        dict: Dictionary with satellite names as keys and coordinate data as
+        values.
+    """
+    transformed_dict = {}
+    satellites = ['g17', 'g18', 'gk2a',
+                  'g16']  # List of satellite names in the order they appear
+    # in the data
+
+    for i, satellite in enumerate(satellites):
+        # Extract coordinates for each satellite
+        coords = {'X': satellites_data[i, 0], 'Y': satellites_data[i, 1],
+                  'Z': satellites_data[i, 2]}
+        transformed_dict[satellite] = coords
+
+    return transformed_dict
+
+
 def main():
     args = parse_arguments()
+
+    # if args.gk2a:
+    #     print("Finding gk2a position.")
+    #     # Code to find the gk2a position
+    # else:
+    #     print("User did not want gk2a plotted.")
+
     satellites_data = process_sat_data_inputs(args)
+    transformed_dict = transform_spacecraft_data(satellites_data)
+
+    timestamp_for_OMNI_title = args.timestamp
 
     date_str = args.timestamp[:8]
     hour = datetime.strptime(args.timestamp, '%Y%m%d%H').hour
 
-    # User selects data based on their criteria
-    coordinates_dict, start_minute, end_minute = user_selection_criteria(
-        satellites_data, date_str, hour)
+    # gk2a_data = average_of_minute_timestamp_of_GK2A(
+    #     load_sosmag_positional_data('2023-02-27 11:00'))
+    # print(gk2a_data)
+    #
+    # gk2a_array = gk2a_data.to_numpy()
+    # gk2a_stacked = np.vstack(gk2a_array)
+    # print(gk2a_stacked)
 
-    timestamp_str_with_minute = args.timestamp + f'{start_minute:02d}'
-    timestamp_for_OMNI_title = datetime.strptime(timestamp_str_with_minute,
-                                                 '%Y%m%d%H%M')
+    # User selects data based on their criteria
+
+    # coordinates_dict, start_minute, end_minute = user_selection_criteria(
+    #     satellites_data, date_str, hour)
+
+    # timestamp_str_with_minute = args.timestamp + f'{start_minute:02d}'
+    # timestamp_for_OMNI_title = datetime.strptime(timestamp_str_with_minute,
+    #                                              '%Y%m%d%H%M')
 
     # Transform the selected coordinates from GSE to Earth-centered system
-    transformed_dict = apply_gse_to_earth_to_dict(coordinates_dict)
+    # transformed_dict = apply_gse_to_earth_to_dict(coordinates_dict)
 
-    imf_bz, solar_wind_pressure = get_omni_values(date_str, hour, start_minute,
-                                                  end_minute)
+    # imf_bz, solar_wind_pressure = get_omni_values(date_str, hour,
+    # start_minute,
+    #                                               end_minute)
 
     # print('TIMESTAMP: ', timestamp_notnan)
-    # imf_bz, solar_wind_pressure = -13.75, 6.86
+    imf_bz, solar_wind_pressure = -13.75, 6.86
 
     # Now, you can use the plotting function from plotting.py
-    plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
-                                                          solar_wind_pressure,
-                                                          imf_bz,
-                                                          timestamp_for_OMNI_title)
+    # plot_spacecraft_positions_with_earth_and_magnetopause(
+    # transformed_dict, solar_wind_pressure, imf_bz, timestamp_for_OMNI_title)
+    plot_sc_and_shue_gk2a_bytimediff(transformed_dict, solar_wind_pressure,
+                                     imf_bz, timestamp_for_OMNI_title)
 
-# if __name__ == "__main__":
-#     main()
+
+if __name__ == "__main__":
+    main()

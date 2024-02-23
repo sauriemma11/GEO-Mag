@@ -1,3 +1,4 @@
+from icecream import ic
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -366,22 +367,26 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data,
     plt.show()
 
 def plot_magnetic_inclination_over_time_3sc(goes_time, goes17_data,
-                                            goes18_data, gk2a_data, date_str,
+                                            gk2a_data, date_str,
+                                            goes18_data=None,
                                             goes16_data=None):
     # Calculate θ for GOES and GK2A data
     goes17_theta = calculate_magnetic_inclination_angle_VDH(goes17_data[:, 0],
                                                             goes17_data[:, 1],
                                                             goes17_data[:, 2])
-    goes18_theta = calculate_magnetic_inclination_angle_VDH(goes18_data[:, 0],
-                                                            goes18_data[:, 1],
-                                                            goes18_data[:, 2])
     gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
                                                           gk2a_data[:, 1],
                                                           gk2a_data[:, 2])
     if goes16_data is not None:
         goes16_theta = calculate_magnetic_inclination_angle_VDH(
-            goes16_data[:, 0], goes16_data[:, 1], goes16_data[:, 2])
-
+            goes16_data[:, 0],
+            goes16_data[:, 1],
+            goes16_data[:, 2])
+    if goes18_data is not None:
+        goes18_theta = calculate_magnetic_inclination_angle_VDH(
+            goes18_data[:, 0],
+            goes18_data[:, 1],
+            goes18_data[:, 2])
     # Create plots for θ over time
     fig, (ax1) = plt.subplots()
 
@@ -392,10 +397,12 @@ def plot_magnetic_inclination_over_time_3sc(goes_time, goes17_data,
 
     ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red',
              linewidth=1)
-    ax1.plot(goes_time, np.degrees(goes18_theta), label='G18', color='orange',
-             linewidth=1)
     ax1.plot(goes_time, np.degrees(gk2a_theta), label='GK2A', color='blue',
              linewidth=1)
+    if goes18_data is not None:
+        ax1.plot(goes_time, np.degrees(goes18_theta), label='G18',
+                 color='orange',
+                 linewidth=1)
     if goes16_data is not None:
         ax1.plot(goes_time, np.degrees(goes16_theta), label='G16',
                  color='green', linewidth=1)
@@ -495,8 +502,9 @@ def plot_BGSE_fromdata_ontop(timedataset, spacecraftdata1, spacecraftdata2,
     ax2.set_ylabel('$B_y$ [nT]')
     ax3.set_ylabel('$B_z$ [nT]')
 
-    data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', '2023-02-26T00:00:00Z',
-                         '2023-02-26T23:59:00Z', dataRepresentation=dr.XARRAY)[
+    data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', f'{date_str}T00:00:00Z',
+                         f'{date_str}T23:59:00Z',
+                         dataRepresentation=dr.XARRAY)[
         1]
     sym_h = data.SYM_H.values
 
@@ -554,24 +562,37 @@ def plot_BGSE_fromdata_ontop(timedataset, spacecraftdata1, spacecraftdata2,
 # print(goes_data.dtype)
 
 g16_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g16_d20230226_v2-0-2.nc')
-goes18coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g18_d20230226_v2-0-2.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2019_05/dn_magn-l2'
+    '-avg1m_g16_d20190514_v2-0-2.nc')
 goes17coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g17_d20230226_v2-0-2.nc')
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230226_b_gse.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2019_05/dn_magn-l2'
+    '-avg1m_g17_d20190514_v2-0-2.nc')
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20190514_b_gse.nc')
+# g16_dataset = nc.Dataset(
+#    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2022_08/dn_magn-l2
+#    -avg1m_g16_d20220804_v2-0-2.nc')
+# goes18coloc_dataset = nc.Dataset(
+#    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2022_08/dn_magn-l2
+#    -avg1m_g18_d20220804_v2-0-2.nc')
+# goes17coloc_dataset = nc.Dataset(
+#    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2022_08/dn_magn-l2
+#    -avg1m_g17_d20220804_v2-0-2.nc')
+# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220804_b_gse.nc')
+
+
 # gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230227_b_gse.nc')
 
-goes_time_fromnc = goes_epoch_to_datetime(goes18coloc_dataset['time'][:])
+goes_time_fromnc = goes_epoch_to_datetime(goes17coloc_dataset['time'][:])
 
-goes18_bgse_stacked = stack_from_data(goes18coloc_dataset['b_gse'])
-goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
+# goes18_bgse_stacked = stack_from_data(goes18coloc_dataset['b_gse'])
+# goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
 
 goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
 goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
+# nan_filled_data = np.empty_like(goes18_bgse_stacked.data)
+# nan_filled_data[:] = np.nan
+# goes17_bgse_stacked = np.ma.masked_array(nan_filled_data, mask=False,
+# fill_value=1e+20, dtype=np.float32)
 
 goes16_bgse_stacked = stack_from_data(g16_dataset['b_gse'])
 goes16_bgse_stacked = fix_nan_for_goes(goes16_bgse_stacked)
@@ -580,7 +601,8 @@ goes16_bgse_stacked = fix_nan_for_goes(goes16_bgse_stacked)
 gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
                                      gk2a_dataset['b_ygse'][:],
                                      gk2a_dataset['b_zgse'][:]))
-
+# ic(gk2a_bgse_stacked)
+# ic(gk2a_bgse_stacked.shape)
 # plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
 
 # Load the time data
@@ -595,13 +617,14 @@ date_str = dtm.datetime.strftime(goes_time_fromnc[0], '%Y-%m-%d')
 # plot_BGSE_fromdata(goes18_bgse_stacked, 'goes18')
 
 plot_BGSE_fromdata_ontop(goes_time_fromnc, goes17_bgse_stacked,
-                         goes18_bgse_stacked, 'G17',
-                         'G18', 'GK2A', gk2a_bgse_stacked, 'G16',
-                         goes16_bgse_stacked, date_str)
+                         gk2a_bgse_stacked, 'G17',
+                         'GK2A', 'G16',
+                         goes16_bgse_stacked, whatspacecraft4=None,
+                         spacecraftdata4=None, date_str=date_str)
 
 goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
 # print(goes_VDH)
-goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
+# goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
 # print(gk2a_VDH)
 gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
 goes16_VDH = gse_to_vdh(goes16_bgse_stacked, goes_time_fromnc)
@@ -609,6 +632,10 @@ goes16_VDH = gse_to_vdh(goes16_bgse_stacked, goes_time_fromnc)
 # plot_magnetic_inclination_over_time(goes_time_fromnc, goes17_VDH, goes18_VDH,
 #                                     date_str)
 
+# plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, goes17_VDH,
+#                                         goes18_VDH, gk2a_VDH, date_str,
+#                                         goes16_VDH)
+
 plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, goes17_VDH,
-                                        goes18_VDH, gk2a_VDH, date_str,
-                                        goes16_VDH)
+                                        gk2a_VDH, date_str, goes18_data=None,
+                                        goes16_data=goes16_VDH)
