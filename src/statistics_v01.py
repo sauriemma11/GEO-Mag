@@ -11,7 +11,7 @@ import numpy as np
 # dfkp = kp.readKpData(kp_data_txt_path)
 # dfkp['Time'] = pd.to_datetime(dfkp['Time'])
 
-model_str = 'TS89'
+model_str = 'T89'
 sosmag_pickle_dir = 'C:/Users/sarah.auriemma/Desktop/Data_new/6month_study' \
                     '/sosmag'
 g17_pickle_dir = 'C:/Users/sarah.auriemma/Desktop/Data_new/6month_study/g17'
