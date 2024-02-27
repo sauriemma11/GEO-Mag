@@ -366,58 +366,38 @@ def plot_magnetic_inclination_over_time(goes_time, goes_data, gk2a_data,
     plt.tight_layout()
     plt.show()
 
-def plot_magnetic_inclination_over_time_3sc(goes_time, goes17_data,
-                                            gk2a_data, date_str,
-                                            goes18_data=None,
-                                            goes16_data=None):
-    # Calculate θ for GOES and GK2A data
-    goes17_theta = calculate_magnetic_inclination_angle_VDH(goes17_data[:, 0],
-                                                            goes17_data[:, 1],
-                                                            goes17_data[:, 2])
-    gk2a_theta = calculate_magnetic_inclination_angle_VDH(gk2a_data[:, 0],
-                                                          gk2a_data[:, 1],
-                                                          gk2a_data[:, 2])
-    if goes16_data is not None:
-        goes16_theta = calculate_magnetic_inclination_angle_VDH(
-            goes16_data[:, 0],
-            goes16_data[:, 1],
-            goes16_data[:, 2])
-    if goes18_data is not None:
-        goes18_theta = calculate_magnetic_inclination_angle_VDH(
-            goes18_data[:, 0],
-            goes18_data[:, 1],
-            goes18_data[:, 2])
-    # Create plots for θ over time
-    fig, (ax1) = plt.subplots()
+def plot_magnetic_inclination_over_time_3sc(goes_time, date_str,
+                                            datasets):
+    color_map = {
+        'G17': 'red',
+        'G18': 'orange',
+        'GK2A': 'blue',
+        'G16': 'green'
+    }
 
-    # GOES17, red
-    # GOES18, orange
-    # SOSMAG, blue
-    # G16, green
+    # Set up the plot
+    fig, ax = plt.subplots()
 
-    ax1.plot(goes_time, np.degrees(goes17_theta), label='G17', color='red',
-             linewidth=1)
-    ax1.plot(goes_time, np.degrees(gk2a_theta), label='GK2A', color='blue',
-             linewidth=1)
-    if goes18_data is not None:
-        ax1.plot(goes_time, np.degrees(goes18_theta), label='G18',
-                 color='orange',
-                 linewidth=1)
-    if goes16_data is not None:
-        ax1.plot(goes_time, np.degrees(goes16_theta), label='G16',
-                 color='green', linewidth=1)
+    # Plot each dataset
+    for satellite, data in datasets.items():
+        if satellite in color_map and data is not None:
+            # Assume a function calculate_magnetic_inclination_angle exists
+            theta = calculate_magnetic_inclination_angle_VDH(data[:, 0],
+                                                             data[:, 1],
+                                                             data[:, 2])
+            ax.plot(goes_time, np.degrees(theta), label=satellite,
+                    color=color_map[satellite], linewidth=1)
 
-    ax1.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
-    ax1.set_ylabel('θ [degrees]')
-    ax1.set_ylim(-45, 90)
+    ax.set_title(f'Magnetic Inclination Angle (θ), {date_str}')
+    ax.set_ylabel('θ [degrees]')
+    ax.set_ylim(-45, 90)
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax.legend()
 
-    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-
-    ax1.legend()
-    # ax1.grid(True)
     plt.tight_layout()
     plt.show()
+
 
 
 def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
@@ -432,210 +412,120 @@ def plot_BGSE_fromdata(spacecraftdata, whatspacecraft):
     plt.show()
 
 
-def plot_BGSE_fromdata_ontop(timedataset, spacecraftdata1, spacecraftdata2,
-                             whatspacecraft1,
-                             whatspacecraft2, whatspacecraft3=None,
-                             spacecraftdata3=None, whatspacecraft4=None,
-                             spacecraftdata4=None, date_str=None):
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
+def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
+    """
+    Plots the B field from multiple spacecraft data on top of each other.
 
-    ax1.set_title(f'B field (GSE) - {date_str}')
-    ax1.plot(goes_time_fromnc, spacecraftdata1[:, 0],
-             label=f'{whatspacecraft1}', color='red', linewidth=1)
-    ax1.plot(goes_time_fromnc, spacecraftdata2[:, 0],
-             label=f'{whatspacecraft2}', color='orange', linewidth=1)
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter(''))
-    ax1.tick_params(axis='x', which='both', length=6, labelbottom=False)
+    Parameters:
+    timedataset (List[datetime]): The time data for the x-axis.
+    spacecraft_data_dict (dict): A dictionary where the key is the
+    spacecraft name and the value is its corresponding data array.
+    date_str (str, optional): The date string for the title of the plot.
 
-    ax2.plot(goes_time_fromnc, spacecraftdata1[:, 1],
-             label=f'{whatspacecraft1} Y', color='red', linewidth=1)
-    ax2.plot(goes_time_fromnc, spacecraftdata2[:, 1],
-             label=f'{whatspacecraft2} Y', color='orange', linewidth=1)
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter(''))
-    ax2.tick_params(axis='x', which='both', length=6, labelbottom=False)
+    Returns:
+    None
+    """
 
-    ax3.plot(goes_time_fromnc, spacecraftdata1[:, 2],
-             label=f'{whatspacecraft1} Z', color='red', linewidth=1)
-    ax3.plot(goes_time_fromnc, spacecraftdata2[:, 2],
-             label=f'{whatspacecraft2} Z', color='orange', linewidth=1)
-    ax3.tick_params(axis='x', which='both', length=6, labelbottom=False)
+    # Define the color mapping for each spacecraft
+    color_map = {
+        'G17': 'red',
+        'G18': 'orange',
+        'GK2A': 'blue',
+        'G16': 'green'
+    }
 
-    if spacecraftdata3 is not None:
-        ax1.plot(goes_time_fromnc, spacecraftdata3[:, 0],
-                 label=f'{whatspacecraft3}', color='blue', linewidth=1)
-        ax2.plot(goes_time_fromnc, spacecraftdata3[:, 1],
-                 label=f'{whatspacecraft3} Y', color='blue', linewidth=1)
-        ax3.plot(goes_time_fromnc, spacecraftdata3[:, 2],
-                 label=f'{whatspacecraft3} Z', color='blue', linewidth=1)
+    # Create subplots
+    fig, axs = plt.subplots(4, 1)
 
-    if spacecraftdata4 is not None:
-        ax1.plot(goes_time_fromnc, spacecraftdata4[:, 0],
-                 label=f'{whatspacecraft4}', color='green', linewidth=1)
-        ax2.plot(goes_time_fromnc, spacecraftdata4[:, 1],
-                 label=f'{whatspacecraft4} Y', color='green', linewidth=1)
-        ax3.plot(goes_time_fromnc, spacecraftdata4[:, 2],
-                 label=f'{whatspacecraft4} Z', color='green', linewidth=1)
+    # Set common plot properties
+    for ax in axs[:-1]:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter(''))
+        ax.tick_params(axis='x', which='both', length=6, labelbottom=False)
 
-    # fix time x-axis labels
-    # ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    plt.setp(ax4.get_xticklabels())
-    # plt.subplots_adjust(hspace=0.4, wspace=0.4)
-    # plt.rc('font', size=12)
+    # Set unique properties and plot each spacecraft
+    for idx, (component, ax) in enumerate(zip(['X', 'Y', 'Z'], axs[:-1])):
+        for spacecraft, data in spacecraft_data_dict.items():
+            ax.plot(timedataset, data[:, idx], label=spacecraft,
+                    color=color_map[spacecraft], linewidth=1)
+            ax.set_ylabel(f'$B_{component.lower()}$ [nT]')
+            # Only show the legend on the first plot (X component)
+        if idx == 0:
+            ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
 
-    # Set the DateFormatter for the x-axis of ax3
-    ax4.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-    plt.subplots_adjust(hspace=0.075, right=0.8)
-
-    # Set ticks inside for all subplots
-    for ax in [ax1, ax2, ax3, ax4]:
-        # ax.grid(True, linestyle='--', linewidth=0.5, color='white')
-        ax.tick_params(direction='inout', which='both')
-        ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-
-    # Set legend for all subplots outside of the plot area
-    ax1.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    # ax2.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    # ax3.legend(loc='upper left', bbox_to_anchor=(1, 1))
-
-    # Set Y-axis labels
-    ax1.set_ylabel('$B_x$ [nT]')
-    ax2.set_ylabel('$B_y$ [nT]')
-    ax3.set_ylabel('$B_z$ [nT]')
-
+    # Plot sym-h for 4th subplot:
+    # get symh data via cdasWs omni dataset
     data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', f'{date_str}T00:00:00Z',
                          f'{date_str}T23:59:00Z',
                          dataRepresentation=dr.XARRAY)[
         1]
     sym_h = data.SYM_H.values
 
-    ax4.plot(goes_time_fromnc, sym_h, linewidth=1)
-    ax4.set_ylabel('SYM-H [nT]')
+    # Plot the SYM-H data on the last subplot
+    axs[-1].plot(timedataset, sym_h, label='SYM-H', linewidth=1)
+    axs[-1].set_ylabel('SYM-H [nT]')
+    axs[-1].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    axs[-1].tick_params(axis='x', which='both')
+    axs[-1].xaxis.set_major_locator(mdates.HourLocator(interval=2))
 
+    axs[0].set_title(f'B field (GSE) - {date_str}')
+
+    plt.subplots_adjust(hspace=0.075, right=0.8)
     plt.tight_layout()
-
     plt.show()
 
 
-# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220815_b_gse.nc')
-# goes_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/08/dn_magn-l2-avg1m_g18_d20220815_v2-0-2.nc')
-# ----
-# goes_time_fromnc = goes_epoch_to_datetime(goes_dataset['time'][:])
-#
-# gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
-#                                      gk2a_dataset['b_ygse'][:],
-#                                      gk2a_dataset['b_zgse'][:]))
-#
-# goes_bgse_stacked = stack_from_data(goes_dataset['b_gse'])
-# goes_bgse_stacked = fix_nan_for_goes(goes_bgse_stacked)
-#
-# # plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
-#
-# # Load the time data
-# # goes_time = load_pickle_file(goes_pickle_path)['time_min']
-# # gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
-#
-# # For plot title, mainly
-# date_str = '2022-08-02'
-#
-# plot_BGSE_fromdata(goes_bgse_stacked, 'goes')
-# plot_BGSE_fromdata(gk2a_bgse_stacked, 'gk2a')
-#
-# goes_VDH = gse_to_vdh(goes_bgse_stacked, goes_time_fromnc)
-# # print(goes_VDH)
-# gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
-# # print(gk2a_VDH)
-#
-# plot_magnetic_inclination_over_time(goes_time_fromnc, goes_VDH, gk2a_VDH,
-#                                     date_str)
-# ----
-
-# if __name__ == "__main__":
-# Pickle file paths:
-# goes_pickle_path = 'Z:/Data/GOES18/model_outs/20221217/modout_20221217' \
-#                    '.pickle'
-# gk2a_pickle_path = 'Z:/Data/GK2A/model_outputs/20221217' \
-#                    '/sosmag_modout_2022-12-17.pickle'
-
-# Load GOES and GK2A mag data
-# goes_data = load_pickle_file(goes_pickle_path)['sat']
-# gk2a_data = load_pickle_file(gk2a_pickle_path)['sat_gse']
-# print(goes_data.dtype)
+##################################
 
 g16_dataset = nc.Dataset(
     'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2019_05/dn_magn-l2'
-    '-avg1m_g16_d20190514_v2-0-2.nc')
+    '-avg1m_g16_d20190513_v2-0-2.nc')
 goes17coloc_dataset = nc.Dataset(
     'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2019_05/dn_magn-l2'
-    '-avg1m_g17_d20190514_v2-0-2.nc')
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20190514_b_gse.nc')
-# g16_dataset = nc.Dataset(
-#    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2022_08/dn_magn-l2
-#    -avg1m_g16_d20220804_v2-0-2.nc')
-# goes18coloc_dataset = nc.Dataset(
-#    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2022_08/dn_magn-l2
-#    -avg1m_g18_d20220804_v2-0-2.nc')
-# goes17coloc_dataset = nc.Dataset(
-#    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2022_08/dn_magn-l2
-#    -avg1m_g17_d20220804_v2-0-2.nc')
-# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20220804_b_gse.nc')
-
-
-# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230227_b_gse.nc')
+    '-avg1m_g17_d20190513_v2-0-2.nc')
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20190513_b_gse.nc')
 
 goes_time_fromnc = goes_epoch_to_datetime(goes17coloc_dataset['time'][:])
 
-# goes18_bgse_stacked = stack_from_data(goes18coloc_dataset['b_gse'])
+# goes18_bgse_stacked = stack_from_data(goes18_dataset['b_gse'])
 # goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
 
 goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
 goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
-# nan_filled_data = np.empty_like(goes18_bgse_stacked.data)
-# nan_filled_data[:] = np.nan
-# goes17_bgse_stacked = np.ma.masked_array(nan_filled_data, mask=False,
-# fill_value=1e+20, dtype=np.float32)
 
 goes16_bgse_stacked = stack_from_data(g16_dataset['b_gse'])
 goes16_bgse_stacked = fix_nan_for_goes(goes16_bgse_stacked)
-# fix_data_error_with_nan(goes16_bgse_stacked, 1059)
 
 gk2a_bgse_stacked = np.column_stack((gk2a_dataset['b_xgse'][:],
                                      gk2a_dataset['b_ygse'][:],
                                      gk2a_dataset['b_zgse'][:]))
-# ic(gk2a_bgse_stacked)
-# ic(gk2a_bgse_stacked.shape)
-# plot_BGSE_fromdata(goes_bgse_stacked, 'GOES')
-
-# Load the time data
-# goes_time = load_pickle_file(goes_pickle_path)['time_min']
-# gk2a_time = load_pickle_file(gk2a_pickle_path)['time_min']
-
-# For plot title
 date_str = dtm.datetime.strftime(goes_time_fromnc[0], '%Y-%m-%d')
-# date_str = '2022-08-15'
 
 # plot_BGSE_fromdata(goes17_bgse_stacked, 'goes17')
 # plot_BGSE_fromdata(goes18_bgse_stacked, 'goes18')
 
-plot_BGSE_fromdata_ontop(goes_time_fromnc, goes17_bgse_stacked,
-                         gk2a_bgse_stacked, 'G17',
-                         'GK2A', 'G16',
-                         goes16_bgse_stacked, whatspacecraft4=None,
-                         spacecraftdata4=None, date_str=date_str)
+
+# GOES17, red
+# GOES18, orange
+# SOSMAG, blue
+# G16, green
+
+spacecraft_data = {
+    'G17': goes17_bgse_stacked,
+    'G16': goes16_bgse_stacked,
+    'GK2A': gk2a_bgse_stacked
+}
+
+plot_BGSE_fromdata_ontop(timedataset=goes_time_fromnc, date_str=date_str,
+                         spacecraft_data_dict=spacecraft_data)
 
 goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
-# print(goes_VDH)
 # goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
-# print(gk2a_VDH)
 gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
 goes16_VDH = gse_to_vdh(goes16_bgse_stacked, goes_time_fromnc)
 
-# plot_magnetic_inclination_over_time(goes_time_fromnc, goes17_VDH, goes18_VDH,
-#                                     date_str)
+VDH_Datasets = {'G17': goes17_VDH,
+                'G16': goes16_VDH,
+                'GK2A': gk2a_VDH}
 
-# plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, goes17_VDH,
-#                                         goes18_VDH, gk2a_VDH, date_str,
-#                                         goes16_VDH)
-
-plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, goes17_VDH,
-                                        gk2a_VDH, date_str, goes18_data=None,
-                                        goes16_data=goes16_VDH)
+plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, date_str,
+                                        VDH_Datasets)
