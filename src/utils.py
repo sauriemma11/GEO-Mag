@@ -451,6 +451,368 @@ def fix_data_error_with_nan(data, index):
     data[index] = np.nan
     return data
 
+
 # Example usage:
 # outliers = find_data_errors(goes16_data[:, 2])
 # print("Outlier indices:", outliers)
+
+
+# Below are timestamp utils from Brian Kress:
+
+def timestamp_constants():
+    """
+    Provides certain constants related to time stamps.
+
+    Returns
+    -------
+    J2000_EPOCH : datetime.datetime
+        J2000 epoch as a datetime object.
+    SECONDS_POSIX_J2000 : float
+        Number of seconds from POSIX time to J2000 epoch.
+    N_SECONDS_DAY : int
+        Number of seconds in a POSIX day.
+    """
+    N_SECONDS_DAY = 86400  # Correct for a POSIX day, even one with a leap
+    # second.
+    J2000_EPOCH = dt.datetime(2000, 1, 1, 12, 0, 0)
+    SECONDS_POSIX_J2000 = 946728000.0
+
+    return J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY
+
+
+def j2000_to_posix(j2000_seconds):
+    """
+    Converts vector of J2000 time stamps (in seconds) to Datetime POSIX
+    timestamps
+    """
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = timestamp_constants()
+
+    dt_list = []
+
+    posix_seconds = SECONDS_POSIX_J2000 + j2000_seconds
+    npts = len(posix_seconds)
+
+    for i in range(npts):
+        # dt64 = np.datetime64(datetime.datetime.utcfromtimestamp(
+        #     posix_seconds[i]))
+        # dt_list.append(dt64)
+        dtt = dt.datetime.utcfromtimestamp(posix_seconds[i])
+        dt_list.append(dtt)
+
+    return np.array(dt_list)
+
+
+def j2000_to_posix_0d(j2000_seconds):
+    """DESCRIPTION:
+      Converts J2000 time stamp scalar (in seconds) to Datetime POSIX timestamp
+    MODULES:
+      datetime
+    INPUTS:
+      j2000_seconds: seconds since J2000 epoch
+    OUTPUTS:
+      datetime"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = timestamp_constants()
+
+    posix_seconds = SECONDS_POSIX_J2000 + j2000_seconds
+
+    dtt = dt.datetime.utcfromtimestamp(posix_seconds)
+
+    return dtt
+
+
+def j2000_1s_timestamps(year, month, date, N_REPORTS):
+    """DESCRIPTION:
+      Creates 1-second-cadence timestamps for the given date in a 2-d array
+      with one dimension being the number of seconds in N_REPORTS.  Timestamps
+      represent the number of seconds since the J2000 epoch.
+    MODULES:
+      datetime, numpy
+    INPUTS:
+      year, month, date: integers describing date (UT)
+      N_REPORTS: number of seconds in L1b record -- likely 30 or 60
+    OUTPUTS:
+      timestamp_array:  n_files x N_REPORTS NumPy array containing timestamps
+      measured in number of seconds since 01 Jan 2000, 1200 UT"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    n_files = N_SECONDS_DAY / N_REPORTS
+
+    timestamp_array = np.zeros((n_files, N_REPORTS))
+
+    dt_start = dt.datetime(year, month, date, 0, 0, 0)
+
+    time_stamp = (dt_start - J2000_EPOCH).total_seconds()
+
+    for r in range(n_files):
+        for s in range(N_REPORTS):
+            timestamp_array[r, s] = time_stamp
+            time_stamp += 1.0
+
+    return timestamp_array
+
+
+def j2000_p1s_timestamps(year, month, date, N_REPORTS, SAMPLES_PER_REPORT):
+    """DESCRIPTION:
+      Creates 0.1-second-cadence timestamps for the given date in a 3-d array
+      with one dimension being the number of seconds in N_REPORTS.  Timestamps
+      represent the number of seconds since the J2000 epoch.
+    MODULES:
+      datetime, numpy
+    INPUTS:
+      year, month, date: integers describing date (UT)
+      N_REPORTS: number of seconds in L1b record -- likely 60
+      SAMPLES_PER_REPORT: number of samples in one second: likely 10
+    OUTPUTS:
+      timestamp_array:  n_files x N_REPORTS x SAMPLES_PER_REPORT NumPy array
+      containing timestamps measured in number of seconds since 01 Jan 2000,
+      1200 UT"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    n_files = N_SECONDS_DAY / N_REPORTS
+    dtt = np.float64(1) / np.float64(SAMPLES_PER_REPORT)
+
+    timestamp_array = np.zeros((n_files, N_REPORTS, SAMPLES_PER_REPORT),
+                               dtype='float64')
+
+    dt_start = dt.datetime(year, month, date, 0, 0, 0)
+
+    time_stamp = np.float64((dt_start - J2000_EPOCH).total_seconds())
+
+    for r in range(n_files):
+        for s in range(N_REPORTS):
+            for t in range(SAMPLES_PER_REPORT):
+                timestamp_array[r, s, t] = time_stamp
+                time_stamp += dtt
+
+    return timestamp_array
+
+
+def create_j2000_timestamps(year, month, date, n_seconds_cadence):
+    """
+    Creates n_seconds_cadence timestamps for a given date.
+
+    Parameters
+    ----------
+    year : int
+        The year.
+    month : int
+        The month.
+    date : int
+        The day of the month.
+    n_seconds_cadence : int
+        Cadence in number of seconds.
+
+    Returns
+    -------
+    timestamp_array : numpy.ndarray
+        Array containing timestamps measured in seconds since 01 Jan 2000,
+        1200 UT.
+    """
+    J2000_EPOCH, _, N_SECONDS_DAY = timestamp_constants()
+
+    n_timestamps = int(N_SECONDS_DAY / n_seconds_cadence)
+
+    timestamp_array = np.zeros(n_timestamps)
+
+    dt_start = dt.datetime(year, month, date, 0, 0, 0)
+    time_stamp = (dt_start - J2000_EPOCH).total_seconds()
+
+    for r in range(n_timestamps):
+        timestamp_array[r] = time_stamp
+        time_stamp += n_seconds_cadence
+
+    return timestamp_array
+
+
+def posix_to_j2000(year, month, day, hour, min, sec):
+    """DESCRIPTION:
+      Converts Datetime POSIX timestamp to J2000 time stamp (in seconds)
+    MODULES:
+      datetime
+    INPUTS:
+      NumPy array containing datetimes
+    OUTPUTS:
+      j2000_seconds: NumPy array of seconds since J2000 epoch"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    dt_start = dt.datetime(year, month, day, hour, min, sec)
+
+    timestamp = (dt_start - J2000_EPOCH).total_seconds()
+
+    return timestamp
+
+
+def iso8601_to_datetime(iso8601):
+    """DESCRIPTION:
+      Converts an ISO8601 string (e.g. '2010-04-05T09:30:00.0Z') to a datetime
+      object
+    MODULES:
+      datetime
+    INPUTS:
+      iso8601: string
+    OUTPUTS:
+      dt: datetime object
+      j2000_sec: seconds since J2000 epoch"""
+
+    year = int(iso8601[0:4])
+    month = int(iso8601[5:7])
+    day = int(iso8601[8:10])
+    hour = int(iso8601[11:13])
+    min = int(iso8601[14:16])
+    sec = int(iso8601[17:19])
+    micro = int(iso8601[20:21]) * 100000
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    dtt = dt.datetime(year, month, day, hour, min, sec, micro)
+
+    j2000_sec = (dtt - J2000_EPOCH).total_seconds()
+
+    return dtt, j2000_sec
+
+
+def doy_to_dom(year, doy):
+    """DESCRIPTION:
+      This function converts day of year (doy) and year to number of month and
+      day of month (dom)
+    MODULES:
+      NumPy
+    INPUTS:
+      year: 4-digit year, e.g. 2000
+      doy: 1-366
+    OUTPUTS:
+      month: 1-12
+      dom: 1-31"""
+
+    if (year % 4) != 0:
+        days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+    else:
+        days = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366]
+    days = np.array(days)
+    month = days[days < doy].shape[0]
+    dom = doy - days[month - 1]
+
+    return month, dom
+
+
+def dom_to_doy(year, month, dom):
+    """DESCRIPTION:
+      This function converts day of year (doy) and year to number of month and
+      day of month (dom)
+    MODULES:
+      NumPy
+    INPUTS:
+      year: 4-digit year, e.g. 2000
+      doy: 1-366
+    OUTPUTS:
+      month: 1-12
+      dom: 1-31"""
+
+    if (year % 4) != 0:
+        days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+    else:
+        days = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366]
+
+    doy = days[month - 1] + dom
+
+    return doy
+
+
+def doy_to_j2000(year, doy):
+    """DESCRIPTION:
+      This function converts day of year (doy) and year to seconds since J2000
+      epoch at 00 UT
+    MODULES:
+      NumPy, datetime
+    INPUTS:
+      year: 4-digit year, e.g. 2000
+      doy: 1-366
+    OUTPUTS:+
+      j2000_start: seconds since J2000 epoch at start of given doy"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    (month, dom) = doy_to_dom(year, doy)
+    dt_start = dt.datetime(year, month, dom, 0, 0, 0)
+
+    j2000_start = (dt_start - J2000_EPOCH).total_seconds()
+
+    return j2000_start
+
+
+def doy_to_j2000_day(year, doy):
+    """DESCRIPTION:
+      Determines number of integral days since J2000 epoch and
+      milliseconds at start of current UT day.  To simulate L0 header times.
+    MODULES:
+      NumPy, datetime
+    INPUTS:
+      year: 4-digit year, e.g. 2000
+      doy: 1-366
+    OUTPUTS:+
+      j2000_start: seconds since J2000 epoch at start of given doy"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+    j2000_start = doy_to_j2000(year, doy)
+
+    n_day_j2k = np.int64(j2000_start / N_SECONDS_DAY)
+    ms_j2k = (j2000_start - n_day_j2k * N_SECONDS_DAY) * 1000.0
+
+    return n_day_j2k, ms_j2k
+
+
+def j2000_to_doy(j2000_seconds):
+    """DESCRIPTION:
+      This function converts seconds since J2000 epoch at 00 UT
+      to day of year
+    MODULES:
+      NumPy, datetime
+    INPUTS:
+      year: 4-digit year, e.g. 2000
+      doy: 1-366
+    OUTPUTS:+
+      j2000_start: seconds since J2000 epoch at start of given doy"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    posix_seconds = SECONDS_POSIX_J2000 + j2000_seconds
+
+    dtt = dt.datetime.utcfromtimestamp(posix_seconds)
+
+    doy = dom_to_doy(dtt.year, dtt.month, dtt.day)
+
+    return np.int32(doy)
+
+
+def j2000_to_iso8601(j2000_seconds):
+    """DESCRIPTION:
+      This function converts a floating point scalar quantifying the number of
+      seconds since J2000 epoch to an ISO 8601 string (UT).
+    MODULES:
+      datetime
+    INPUTS:
+      j2000_seconds: seconds since J2000 epoch, float
+    OUTPUTS:
+      iso8601: ISO8601 string representing UT"""
+
+    (J2000_EPOCH, SECONDS_POSIX_J2000, N_SECONDS_DAY) = \
+        timestamp_constants()
+
+    dtt = dt.datetime.utcfromtimestamp(SECONDS_POSIX_J2000 +
+                                       j2000_seconds)
+
+    iso8601 = dtt.isoformat()
+
+    return iso8601
