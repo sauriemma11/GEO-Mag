@@ -3,9 +3,6 @@
 
 # standard packages
 import sys
-import pickle
-import matplotlib.dates as mdates
-import os
 from icecream import ic
 import matplotlib
 import matplotlib.gridspec as gridspec
@@ -16,13 +13,10 @@ from netCDF4 import Dataset as NCDataset
 matplotlib.rcParams.update({'font.size': 10})
 import utils as tsu
 
-ELE_DIFF_CHANS = 7  # Change depending on what you want to plot (1-10)
+ELE_DIFF_CHANS = 10
 PRO_DIFF_CHANS = 11
 TELESCOPES = 5
 ETEL = 2  # 2 is electron telescope #4
-plot_subplot2 = False  # set to false if you dont care to see the integral flux
-EXTEND_PLOT_HOURS = 6  # Make room for the legend by extending the plot by
-# this many hours
 
 # input files
 filenamelist = []
@@ -31,13 +25,11 @@ filenamelist = []
 # RECORDS_PER_FILE = 288
 RECORDS_PER_FILE = 1440  # Change this depending on timestamps?
 
-# filenamelist.append('C:/Users/sarah.auriemma/Desktop/Data_new/g17/pd
-# /sci_mpsh-l2-avg1m_g17_d20190514_v1-0-3.nc')
-# filenamelist.append('C:/Users/sarah.auriemma/Desktop/Data_new/g16/pd
-# /sci_mpsh-l2-avg1m_g16_d20190514_v1-0-2.nc')
 filenamelist.append(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/pd/sci_mpsh-l2'
-    '-avg1m_g17_d20220815_v2-0-0.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/pd/dn_mpsl-l2'
+    '-avg1m_g16_d20230227_v2-0-0.nc')
+
+###################
 
 num_input_files = len(filenamelist)
 parts = filenamelist[0].split('/')
@@ -45,7 +37,7 @@ spacecraft_name = parts[-3].upper()
 ic(spacecraft_name)
 
 
-def mkticks(first_j2000_sec, num_input_files, extra_hours=0):
+def mkticks(first_j2000_sec, num_input_files):
     """
     Generate tic locations for every hour and tic labels for every three
     hours for plotting.
@@ -53,8 +45,6 @@ def mkticks(first_j2000_sec, num_input_files, extra_hours=0):
     Args:
     first_j2000_sec (float): The J2000 seconds of the first timestamp.
     num_input_files (int): The number of input files.
-    extra_hours (int): Additional hours to extend beyond the last input file.
-
 
     Returns:
     tuple: A tuple containing:
@@ -67,25 +57,22 @@ def mkticks(first_j2000_sec, num_input_files, extra_hours=0):
     ticloc = []
     ticstr = []
     current_j2000_sec = first_j2000_sec
-    total_hours = 24 * num_input_files + extra_hours
 
-    for hour in range(total_hours):
-        ticloc.append(current_j2000_sec + hour * 3600)
-        # Format the hour into UTC hour
-        utc_hour = hour % 24
-        # Add a label every three hours, and handle the date label at midnight
-        if utc_hour % 3 == 0:
-            if utc_hour == 0:
-                date_label = tsu.j2000_to_posix_0d(
-                    current_j2000_sec + hour * 3600).strftime('00\n%m/%d')
-                ticstr.append(date_label)
+    # Assume each file represents one day's worth of data
+    for _ in range(num_input_files):
+        # Generate hourly ticks for 24 hours
+        for hour in range(24):
+            ticloc.append(current_j2000_sec + hour * 3600)
+            # Add a label every three hours
+            if hour % 3 == 0:
+                ticstr.append(f'{hour:02d}')
             else:
-                ticstr.append(f'{utc_hour:02d}')
-        else:
-            ticstr.append('')
+                ticstr.append('')
 
-        # Convert first and last J2000 seconds to date strings for year,
-        # month, day
+        # Move to the next day
+        current_j2000_sec += 24 * 3600
+
+    # Convert first and last J2000 seconds to date strings for year, month, day
     first_date_str = str(tsu.j2000_to_posix_0d(first_j2000_sec))
     last_j2000_sec = ticloc[-1]
     last_date_str = str(tsu.j2000_to_posix_0d(last_j2000_sec))
@@ -99,15 +86,24 @@ def mkticks(first_j2000_sec, num_input_files, extra_hours=0):
     return ticloc, ticstr, yearstr, monthstr, daystr
 
 
-variable_names_arr = ['time', 'AvgDiffProtonFlux', 'AvgDiffElectronFlux',
-                      'DiffElectronEffectiveEnergy', 'AvgIntElectronFlux',
-                      'IntElectronEffectiveEnergy']
+# ic| nc_file.variables.keys(): dict_keys(['time', 'L1bRecordsInAvg',
+# 'yaw_flip_flag', 'EclipseFlag', 'AvgDiffIonFlux', 'AvgDiffIonFluxUncert',
+# 'DiffIonValidL1bSamplesInAvg', 'DiffIonDQFdtcSum', 'DiffIonDQFoobSum',
+# 'DiffIonDQFerrSum', 'AvgDiffElectronFlux', 'AvgDiffElectronFluxUncert',
+# 'DiffElectronValidL1bSamplesInAvg', 'DiffElectronDQFdtcSum',
+# 'DiffElectronDQFoobSum', 'DiffElectronDQFerrSum', 'ExpectedLUTNotFound'])
+
+variable_names_arr = ['time', 'AvgDiffIonFlux', 'AvgDiffElectronFlux']
+# d_arr = ['time', 'AvgDiffProtonFlux', 'AvgDiffElectronFlux',
+# 'DiffElectronEffectiveEnergy', 'AvgIntElectronFlux',
+# 'IntElectronEffectiveEnergy']
+
 variable_data = {var_name: [] for var_name in variable_names_arr}
 
 for file in filenamelist:
     nc_file = NCDataset(file, 'r')
-    # ic(nc_file.variables.keys())
-    # ic(nc_file['EleMoments'])
+    ic(nc_file.variables.keys())
+    ic(nc_file['AvgDiffElectronFlux'])
 
     for var_name in variable_names_arr:
         if var_name in nc_file.variables:
@@ -138,11 +134,10 @@ for var_name in variable_data:
 TimeStamp = variable_data['time'][:]
 
 ic(variable_data['AvgIntElectronFlux'].shape)
-# min_value = np.nanmin(variable_data['AvgIntElectronFlux'][:, ETEL])
-# ic(min_value)
+min_value = np.nanmin(variable_data['AvgIntElectronFlux'][:, ETEL])
+ic(min_value)
 
 PLOT = 1
-
 if (PLOT == 1):
     # The north-to-south order of telescope numbers is (3, 1, 4, 2, 5) for
     # electrons, where telescope numbers 1-5 correspond to zero-based array
@@ -197,50 +192,23 @@ if (PLOT == 1):
     first_j2000_sec = TimeStamp[0]
     last_j2000_sec = TimeStamp[len(TimeStamp) - 1]
 
+    xmin = first_j2000_sec
+    xmax = last_j2000_sec + num_input_files * 6. * 3600.  # make room for
+    # legend
+
     # make tick locations and labels
     HOUR_TICK_OPT = 1  # 0: no hour ticks; 1: tick mark only; 2: tick mark
     # and label
     ticloc, ticstr, yearstr, monthstr0, daystr0 = mkticks(first_j2000_sec,
-                                                          num_input_files, 6)
+                                                          num_input_files)
     date_str = yearstr + '/' + monthstr0 + '/' + daystr0
-
-    seconds_per_hour = 3600
-
-    xmin = first_j2000_sec
-    xmax = last_j2000_sec
-
-    # xmax = last_j2000_sec + num_input_files * EXTEND_PLOT_HOURS *
-    # seconds_per_hour  # make room for
-    # legend
-    # last_tick_time = ticloc[-1]
-
-    # for i in range(1, EXTEND_PLOT_HOURS + 1):
-    #     new_tick_time = last_tick_time + i * seconds_per_hour
-    #     ticloc.append(new_tick_time)
-    #
-    #     # Determine the new hour in UTC for labeling (0-23 cycle)
-    #     total_hours = int((new_tick_time - ticloc[0]) / seconds_per_hour)
-    #     hour_of_day = total_hours % 24
-    #
-    #     # Calculate the new date based on the extended hours
-    #     new_date = base_date + timedelta(hours=total_hours)
-    #
-    #     # Append label every 3 hours, special label at midnight
-    #     if hour_of_day == 0:
-    #         ticstr.append(f'00\n{new_date.strftime("%m/%d")}')
-    #     elif hour_of_day % 3 == 0:
-    #         ticstr.append(f'{hour_of_day:02d}')
-    #     else:
-    #         ticstr.append('')
-
+    ic(date_str)
     LFS = 10  # legend text font size
 
     # plot
     # pyplot.figure(1, figsize=[12, 6])
     pyplot.figure(1)
-    pyplot.suptitle(
-        f'{spacecraft_name} : MPS-HI 1-min avg electron flux - {date_str} ',
-        fontsize=14)
+    pyplot.suptitle(f'{spacecraft_name} MPS-HI {date_str} ', fontsize=14)
 
     numrow = 4
     numcol = 1
@@ -254,50 +222,43 @@ if (PLOT == 1):
                     linewidth=2., color=mpsh_cm[chan], label=mpsh_elabel[chan])
     ymin = 1.E-3
     ymax = 2.E6
-
+    # ymax = 1.2*np.max(TelAvgDiffEleFlux[:,:])
+    # ymin = .8*np.min(np.where(TelAvgDiffEleFlux[:,:]>0,TelAvgDiffEleFlux[
+    # :,:],ymax))
     pyplot.ylabel(
         etel_label[ETEL] + '\nelectrons/cm$^2$-s-str-keV')
     pyplot.xlim([xmin, xmax])
     pyplot.ylim([ymin, ymax])
     pyplot.yscale('log')
-
+    labels = [item.get_text() for item in ax1.get_xticklabels()]
+    empty_string_labels = [''] * len(labels)
+    ax1.set_xticklabels(empty_string_labels)
     pyplot.legend(loc='upper right', prop={'size': LFS}, fancybox=True,
                   framealpha=1.0)
 
-    # plot panel 2 (integral flux):
-    if plot_subplot2:
-        labels = [item.get_text() for item in ax1.get_xticklabels()]
-        empty_string_labels = [''] * len(labels)
-        ax1.set_xticklabels(empty_string_labels)
-        gridspec.GridSpec(5, 1)
-        ax2 = pyplot.subplot2grid((numrow, numcol), (3, 0), colspan=1,
-                                  rowspan=1)
-        AvgIntElectronFlux = variable_data['AvgIntElectronFlux']
-        pyplot.plot(TimeStamp[:], AvgIntElectronFlux[:, ETEL], linewidth=2.,
-                    color='k', label=f'MPS-HI E11 (>2 MeV)')
-        ymin = 1.E1
-        ymax = 1.E4
-        # ymax = 1.2*np.max(TelAvgIntEleFlux)
-        # ymin = .8*np.min(np.where(TelAvgIntEleFlux>0,TelAvgIntEleFlux,ymax))
-        # pyplot.xlabel(yearstr, fontsize=12)
-        pyplot.xlabel('UT [hours]')
-        pyplot.ylabel(
-            f'{spacecraft_name} MPS-HI ' + etel_label[
-                ETEL] + '\nelectrons/cm$^2$-s-str')
-        pyplot.xlim([xmin, xmax])
-        pyplot.ylim([ymin, ymax])
-        pyplot.yscale('log')
+    # plot panel 2
+    gridspec.GridSpec(5, 1)
+    ax2 = pyplot.subplot2grid((numrow, numcol), (3, 0), colspan=1, rowspan=1)
+    AvgIntElectronFlux = variable_data['AvgIntElectronFlux']
+    pyplot.plot(TimeStamp[:], AvgIntElectronFlux[:, ETEL], linewidth=2.,
+                color='k', label=f'MPS-HI E11 (>2 MeV)')
+    ymin = 1.E1
+    ymax = 1.E4
+    # ymax = 1.2*np.max(TelAvgIntEleFlux)
+    # ymin = .8*np.min(np.where(TelAvgIntEleFlux>0,TelAvgIntEleFlux,ymax))
+    # pyplot.xlabel(yearstr, fontsize=12)
+    pyplot.xlabel('UT [hours]')
+    pyplot.ylabel(
+        f'{spacecraft_name} MPS-HI ' + etel_label[
+            ETEL] + '\nelectrons/cm$^2$-s-str')
+    pyplot.xlim([xmin, xmax])
+    pyplot.ylim([ymin, ymax])
+    pyplot.yscale('log')
 
-        pyplot.xticks(ticloc, ticstr, fontsize=10)
-        pyplot.legend(loc='lower right', prop={'size': LFS}, fancybox=True,
-                      framealpha=.5)
-    else:
-        pyplot.xlabel('UT [hours]')
-        pyplot.xticks(ticloc, ticstr, fontsize=10)
-
-    pyplot.savefig(
-        f'{spacecraft_name}_mpshFlux_{yearstr}-{monthstr0}-{daystr0}.png',
-        bbox_inches='tight')
+    pyplot.xticks(ticloc, ticstr, fontsize=10)
+    pyplot.legend(loc='lower right', prop={'size': LFS}, fancybox=True,
+                  framealpha=.5)
+    # pyplot.savefig(
     #     'g16_mpsh_fluxes_' + yearstr + '-' + monthstr0 + '-' + daystr0 +
     #     '.png',
     #     bbox_inches='tight')

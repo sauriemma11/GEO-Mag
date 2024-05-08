@@ -17,18 +17,18 @@ sosmag_pickle_dir = 'C:/Users/sarah.auriemma/Desktop/Data_new/6month_study' \
 g17_pickle_dir = 'C:/Users/sarah.auriemma/Desktop/Data_new/6month_study/g17'
 
 # Define the start and end dates for your desired date range
-start_date = pd.to_datetime('2019-04-01')
-end_date = pd.to_datetime('2019-09-30')
+start_date = pd.to_datetime('2019-05-14')
+end_date = pd.to_datetime('2019-05-15')
 
 # Load and trim GK2A data
 gk2a_time_list, gk2a_data_list, gk2a_89_model_list, gk2a_89_subtr_list = \
     data_loader.load_and_trim_data(
-    sosmag_pickle_dir, start_date, end_date)
+        sosmag_pickle_dir, start_date, end_date)
 
 # Load and trim GOES-17 data
 g17_time_list, g17_data_list, g17_89_model_list, g17_89_subtr_list = \
     data_loader.load_and_trim_data(
-    g17_pickle_dir, start_date, end_date)
+        g17_pickle_dir, start_date, end_date)
 
 
 #
@@ -183,13 +183,6 @@ print('---------------')
 # hourly_stats = utils.calc_stats(gk2a_time_list,
 # gk2a_total_mag_field_modelsub, g17_total_mag_field_modelsub, 'H')
 # print(hourly_stats)
-
-
-# To produce a table suitable for a scientific journal, you would likely do
-# further formatting:
-# table_for_journal = hourly_stats.style.format("{:.2f}").set_table_styles(
-#     [{"selector": "th", "props": [("font-size", "10pt")]}]
-# )
 
 
 # TODO: add if __name__ == '__main__' to avoid running on import
