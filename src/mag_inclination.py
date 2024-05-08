@@ -477,17 +477,20 @@ def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
 ##################################
 
 g16_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2019_05/dn_magn-l2'
-    '-avg1m_g16_d20190513_v2-0-2.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g16_d20230226_v2-0-2.nc')
 goes17coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2019_05/dn_magn-l2'
-    '-avg1m_g17_d20190513_v2-0-2.nc')
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20190513_b_gse.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g17_d20230226_v2-0-2.nc')
+gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230226_b_gse.nc')
+goes18_dataset = nc.Dataset(
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2023_02/dn_magn-l2'
+    '-avg1m_g18_d20230226_v2-0-2.nc')
 
 goes_time_fromnc = goes_epoch_to_datetime(goes17coloc_dataset['time'][:])
 
-# goes18_bgse_stacked = stack_from_data(goes18_dataset['b_gse'])
-# goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
+goes18_bgse_stacked = stack_from_data(goes18_dataset['b_gse'])
+goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
 
 goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
 goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
@@ -512,14 +515,15 @@ date_str = dtm.datetime.strftime(goes_time_fromnc[0], '%Y-%m-%d')
 spacecraft_data = {
     'G17': goes17_bgse_stacked,
     'G16': goes16_bgse_stacked,
-    'GK2A': gk2a_bgse_stacked
+    'GK2A': gk2a_bgse_stacked,
+    'G18': goes18_bgse_stacked
 }
 
 plot_BGSE_fromdata_ontop(timedataset=goes_time_fromnc, date_str=date_str,
                          spacecraft_data_dict=spacecraft_data)
 
 goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
-# goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
+goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
 gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
 goes16_VDH = gse_to_vdh(goes16_bgse_stacked, goes_time_fromnc)
 
@@ -529,3 +533,8 @@ VDH_Datasets = {'G17': goes17_VDH,
 
 plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, date_str,
                                         VDH_Datasets)
+
+# save_pickle_path = f'C:/Users/sarah.auriemma/Desktop/Data_new/VDH_{
+# date_str}.pickle'
+# with open(save_pickle_path, 'wb') as f:
+#     pickle.dump(VDH_Datasets, f)

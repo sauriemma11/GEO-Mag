@@ -3,6 +3,7 @@ import datetime as dt
 from typing import List, Tuple
 import pandas as pd
 import re
+import utils as tsu
 
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
@@ -414,6 +415,55 @@ def find_data_errors(data, window=5, threshold=5):
             outliers.append(i - window // 2)
 
     return outliers
+
+
+def mkticks(first_j2000_sec, num_input_files):
+    """
+    Generate tic locations for every hour and tic labels for every three
+    hours for plotting.
+
+    Args:
+    first_j2000_sec (float): The J2000 seconds of the first timestamp.
+    num_input_files (int): The number of input files.
+
+    Returns:
+    tuple: A tuple containing:
+        - list: Tic locations for every hour.
+        - list: Tic labels for every three hours.
+        - str: Year string.
+        - str: Month string.
+        - str: Day string.
+    """
+    ticloc = []
+    ticstr = []
+    current_j2000_sec = first_j2000_sec
+
+    # Assume each file represents one day's worth of data
+    for _ in range(num_input_files):
+        # Generate hourly ticks for 24 hours
+        for hour in range(24):
+            ticloc.append(current_j2000_sec + hour * 3600)
+            # Add a label every three hours
+            if hour % 3 == 0:
+                ticstr.append(f'{hour:02d}')
+            else:
+                ticstr.append('')
+
+        # Move to the next day
+        current_j2000_sec += 24 * 3600
+
+    # Convert first and last J2000 seconds to date strings for year, month, day
+    first_date_str = str(tsu.j2000_to_posix_0d(first_j2000_sec))
+    last_j2000_sec = ticloc[-1]
+    last_date_str = str(tsu.j2000_to_posix_0d(last_j2000_sec))
+
+    yearstr = first_date_str[0:4]
+    if first_date_str[0:4] != last_date_str[0:4]:
+        yearstr += ' - ' + last_date_str[0:4]
+    monthstr = first_date_str[5:7]
+    daystr = first_date_str[8:10]
+
+    return ticloc, ticstr, yearstr, monthstr, daystr
 
 
 def format_units(units):

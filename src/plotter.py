@@ -4,6 +4,7 @@ import spacepy.plot as spp  # For dual_half_circle
 import spacepy.empiricals as spe  # For getMagnetopause
 import numpy as np
 import spacepy.omni as omni
+from icecream import ic
 import spacepy.time as spt
 from datetime import datetime, timedelta
 import utils
@@ -339,12 +340,12 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 #     g18_time_diff = calculate_time_difference(137.2)
 #
 #     date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
-#     date_obj_previous_day = date_obj - dt.timedelta(
-#         days=1)  # For plotting noon time GK2A
+#     ic(date_obj)
+#     date_obj_previous_day = date_obj - dt.timedelta(days=1)  # For
+#     plotting noon time GK2A
 #
 #     midnight_time = dt.datetime(date_obj.year, date_obj.month,
-#     date_obj.day, 0,
-#                                 0)
+#     date_obj.day, 0, 0)
 #
 #     noon_time = dt.datetime(date_obj.year, date_obj.month, date_obj.day,
 #     12, 0)
@@ -363,8 +364,8 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 #     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey=True)
 #
 #     if use_omni:
-#         title = f'(SOSMAG - {what_model}), ({what_spacecraft} - ' \
-#                 f'{what_model}), using OMNI \n{date_str}'
+#         title = f'(SOSMAG - {what_model}), ({what_spacecraft} - f{
+#         what_model}), using OMNI \n{date_str}'
 #     else:
 #         title = f'(SOSMAG - {what_model}), ({what_spacecraft} - {
 #         what_model}) \n{date_str}'
@@ -428,78 +429,82 @@ def plot_magnetic_inclination_over_time_3sc(date_str, goes_time,
 #     if save_figs:
 #         fig.savefig(filename)
 #
-#     # Plot total mag field differences
-#     fig, (ax1) = plt.subplots(1, 1)
-#     ax1.plot(goes18_time_1min, subtr)
-#     ax1.set_xlabel('Time')
-#     ax1.set_ylabel('|B| [nT]')
-#     ax1.set_title('Total B field difference for ' + date_str)
-#     ax1.xaxis.set_major_locator(
-#         mdates.HourLocator(interval=2))  # Show every 2 hours
-#     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-#     ax1.legend().set_visible(False)
-#     plt.tight_layout()
-#     if show_figs:
-#         plt.show()
-#
-#     if use_omni:
-#         filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
-#                    f'{what_model}-{what_spacecraft}-{what_model}_totalB_{
-#         date_str2}_OMNI.png'
-#                    }
-#     else:
-#         filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
-#                    f'{what_spacecraft}/sosmag-{w
-#         hat_model}-{what_spacecraft}-{what_model}_totalB_{date_str2}.png'
-#
-#     if save_figs:
-#         fig.savefig(filename)
-#
-#     fig, (ax1) = plt.subplots(1, 1)
-#     ax1.plot(goes18_time_1min, gk2a_ts04_diff - goes18_ts04_diff)
-#     date_str = gk2a_time_1min[0].strftime('%Y-%m-%d')
-#
-#     ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time), y_annotation),
-#                  xytext=(-15, 10),
-#                  textcoords='offset points', color=sosmag_color, fontsize=12)
-#     ax1.annotate(f'M', xy=(mdates.date2num(g18_midnight_time), y_annotation),
-#                  xytext=(-15, 10),
-#                  textcoords='offset points', color=g17_color, fontsize=12)
-#
-#     title = '(SOSMAG - ' + whatModel + ') - (' + whatSpacecraft + ' - ' +
-#             whatModel + ')\n{}'.format(
-#         date_str)
-#     ax1.set_title(title)
-#     ax1.set(xlabel='Time [h]', ylabel='B Field GSE [nT]')
-#
-#     ax1.legend(['x', 'y', 'z'], bbox_to_anchor=(1.19, 1), loc='upper right')
-#
-#     ax1.xaxis.set_major_locator(
-#         mdates.HourLocator(interval=2))  # show every 2 hours
-#     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-#     print(goes18_time_1min[:])
-#     fig.patch.set_facecolor('white')
-#
-#     fig.patch.set_alpha(0.6)
-#     # ax1.grid(False)
-#
-#     plt.tight_layout()
-#
-#     if show_figs:
-#         plt.show()
-#
-#     if use_omni:
-#         filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
-#                    f'{what_model}-{what_spacecraft}-{what_model}_GSE_{
-#         date_str2}_OMNI.png'
-#                    }
-#     else:
-#         filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
-#                    f'{what_spacecraft}/sosmag-{w
-#         hat_model}-{what_spacecraft}-{what_model}_GSE_{date_str2}.png'
-#
-#     if save_figs:
-#         fig.savefig(filename)
+#     # # Plot total mag field differences
+#     # fig, (ax1) = plt.subplots(1, 1)
+#     # ax1.plot(goes18_time_1min, subtr)
+#     # ax1.set_xlabel('Time')
+#     # ax1.set_ylabel('|B| [nT]')
+#     # ax1.set_title('Total B field difference for ' + date_str)
+#     # ax1.xaxis.set_major_locator(
+#     #     mdates.HourLocator(interval=2))  # Show every 2 hours
+#     # ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     # ax1.legend().set_visible(False)
+#     # plt.tight_layout()
+#     # if show_figs:
+#     #     plt.show()
+#     #
+#     # if use_omni:
+#     #     filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
+#     #                f'{what_model}-{what_spacecraft}-{what_model}_totalB_{
+#     #     date_str2}_OMNI.png'
+#     #                }
+#     # else:
+#     #     filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
+#     #                f'{what_spacecraft}/sosmag-{w
+#     #     hat_model}-{what_spacecraft}-{what_model}_totalB_{date_str2}.png'
+#     #
+#     # if save_figs:
+#     #     fig.savefig(filename)
+#     #
+#     # fig, (ax1) = plt.subplots(1, 1)
+#     # ax1.plot(goes18_time_1min, gk2a_ts04_diff - goes18_ts04_diff)
+#     # date_str = gk2a_time_1min[0].strftime('%Y-%m-%d')
+#     #
+#     # ax1.annotate('M', xy=(mdates.date2num(gk2a_midnight_time),
+#     y_annotation),
+#     #              xytext=(-15, 10),
+#     #              textcoords='offset points', color=sosmag_color,
+#     fontsize=12)
+#     # ax1.annotate(f'M', xy=(mdates.date2num(g18_midnight_time),
+#     y_annotation),
+#     #              xytext=(-15, 10),
+#     #              textcoords='offset points', color=g17_color, fontsize=12)
+#     #
+#     # title = '(SOSMAG - ' + whatModel + ') - (' + whatSpacecraft + ' - ' +
+#     #         whatModel + ')\n{}'.format(
+#     #     date_str)
+#     # ax1.set_title(title)
+#     # ax1.set(xlabel='Time [h]', ylabel='B Field GSE [nT]')
+#     #
+#     # ax1.legend(['x', 'y', 'z'], bbox_to_anchor=(1.19, 1), loc='upper
+#     right')
+#     #
+#     # ax1.xaxis.set_major_locator(
+#     #     mdates.HourLocator(interval=2))  # show every 2 hours
+#     # ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+#     # print(goes18_time_1min[:])
+#     # fig.patch.set_facecolor('white')
+#     #
+#     # fig.patch.set_alpha(0.6)
+#     # # ax1.grid(False)
+#     #
+#     # plt.tight_layout()
+#     #
+#     # if show_figs:
+#     #     plt.show()
+#     #
+#     # if use_omni:
+#     #     filename = f'Z:/Data/sos-04-goes-04/{what_spacecraft}/sosmag-' \
+#     #                f'{what_model}-{what_spacecraft}-{what_model}_GSE_{
+#     #     date_str2}_OMNI.png'
+#     #                }
+#     # else:
+#     #     filename = f'Z:/Data/sos-{what_model}-goes-{what_model}/' \
+#     #                f'{what_spacecraft}/sosmag-{what_model}-{
+#     what_spacecraft}-{what_model}_GSE_{date_str2}.png'
+#     #
+#     # if save_figs:
+#     #     fig.savefig(filename)
 
 
 def plot_sc_vs_sc_scatter(x, y, x_label='X-axis', y_label='Y-axis',
