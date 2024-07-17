@@ -1,0 +1,12 @@
+{
+  "g16_magn_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2024_05/dn_magn-l2-avg1m_g16_d20240510_v2-0-2.nc",
+  "g16_mpsl_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g16/pd/2024_05/dn_mpsl-l2-mom1m_g16_d20240510_v1-0-2.nc",
+  "g18_magn_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2024_05/dn_magn-l2-avg1m_g18_d20240510_v2-0-2.nc",
+  "g18_mpsl_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g18/pd/dn_mpsl-l2-mom1m_g18_d20240510_v1-0-2.nc",
+  "thresholds": {
+    "ion_ratio": 30,
+    "electron_ratio": 100
+  }
+}
+
+
