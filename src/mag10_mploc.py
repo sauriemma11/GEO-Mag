@@ -388,20 +388,23 @@ def main(config_path):
         params_to_propagate = config.get('params_to_propagate')
         propagated_data = propagate_parameters(config_path=config_path, params=params_to_propagate)
         sw_data = rename_propagated_data_keys(propagated_data)
+        sw_data_via = 'DSCOVR'
     else:
         print("Getting SW data via OMNI")
         # Fetch OMNI data using the determined datetime range
         sw_data = get_omni_values(start_datetime, end_datetime)
+        sw_data_via = 'OMNI_HRO'
 
     sw_dyn_p = calculate_solar_wind_dynamic_pressure(sw_data)
     shue_r0, shue_alpha = run_shue(sw_data['BZ_GSM'], sw_dyn_p)
+    ic(np.nanmin(shue_r0))
 
     # Calculate flags and plot results for each satellite
     for key, res in results.items():
         if res:
             satellite_name = f"GOES-{key[1:].upper()}"  # Construct the satellite name dynamically
             flags = calculate_flags(shue_r0, res['ion_ratios'], res['electron_ratios'], res['b_epn'])
-            plot_mpause_plots(res, flags, sw_data, shue_r0, sw_dyn_p, satellite_name)
+            plot_mpause_plots(res, flags, sw_data, shue_r0, sw_dyn_p, satellite_name, sw_data_via)
 
 
 if __name__ == '__main__':
