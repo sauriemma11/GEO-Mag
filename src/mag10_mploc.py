@@ -4,6 +4,8 @@ import datetime
 from netCDF4 import num2date
 import netCDF4 as nc
 from scipy import constants
+from spacepy.coordinates import Coords
+from spacepy.time import Ticktock
 import numpy as np
 from datetime import datetime, timedelta
 from icecream import ic
@@ -11,6 +13,7 @@ import os
 from cdasws import CdasWs
 import matplotlib.pyplot as plt
 from mploc_plotting import plot_mpause_plots
+from DSCOVR_prop.dscovr_propagation import propagate_parameters
 
 if not "CDF_LIB" in os.environ:
     base_dir = "C:/Scripts/cdf3.9.0"
@@ -74,7 +77,7 @@ def get_omni_values(start_datetime, end_datetime):
     # Fetch data from the OMNI dataset
     data = cdas.get_data(
         'OMNI_HRO_1MIN',
-        ['BZ_GSM', 'Pressure', 'flow_speed', 'proton_density'],
+        ['BZ_GSM', 'flow_speed', 'proton_density'],
         start_time_str,
         end_time_str)
 
@@ -82,8 +85,8 @@ def get_omni_values(start_datetime, end_datetime):
 
     if 'BZ_GSM' in actual_data:
         actual_data['BZ_GSM'] = np.where(actual_data['BZ_GSM'] >= 9999, np.nan, actual_data['BZ_GSM'])
-    if 'Pressure' in actual_data:
-        actual_data['Pressure'] = np.where(actual_data['Pressure'] >= 99, np.nan, actual_data['Pressure'])
+    # if 'Pressure' in actual_data:
+    # actual_data['Pressure'] = np.where(actual_data['Pressure'] >= 99, np.nan, actual_data['Pressure'])
     if 'flow_speed' in actual_data:
         actual_data['flow_speed'] = np.where(actual_data['flow_speed'] >= 99999, np.nan, actual_data['flow_speed'])
     if 'proton_density' in actual_data:
@@ -136,10 +139,12 @@ def read_nc_data(filepath):
         # ic(available_vars)
         data = {}
 
+
         # Check if it's a magnetic field file
         if 'b_gsm' in available_vars:
             data['b_gsm'] = dataset.variables['b_gsm'][:]
             data['time'] = dataset.variables['time'][:]
+            data['orbit_llr_geo'] = dataset.variables['orbit_llr_geo'][:]
             # logger.info(f"Magnetic field data (b_gsm) read from {filepath}")
 
         if 'b_epn' in available_vars:
@@ -250,9 +255,20 @@ def run_shue(sw_bz, sw_pdyn):
     Returns:
         tuple: (r_0, alpha)
     """
-    assert np.size(sw_bz) == np.size(sw_pdyn) and len(np.shape(sw_bz)) == 1
-    shue_r0 = (10.22 + 1.29 * np.tanh(0.184 * (sw_bz + 8.14))) * sw_pdyn ** (-1.0 / GEOSTAT_re)
-    shue_alpha = (0.58 - 0.007 * sw_bz) * (1 + 0.024 * (np.log(sw_pdyn)))
+    GEOSTAT_re = 6.6  # Define or ensure this constant is correctly imported or set
+
+    # Ensure inputs are numpy arrays
+    sw_bz = np.array(sw_bz, dtype=float)
+    sw_pdyn = np.array(sw_pdyn, dtype=float)
+
+    # Check if the input arrays are of the same size and 1-dimensional
+    if sw_bz.shape != sw_pdyn.shape or sw_bz.ndim != 1:
+        raise ValueError("sw_bz and sw_pdyn must be 1D arrays of the same length")
+
+    # Calculate Shue et al. parameters
+    shue_r0 = (10.22 + 1.29 * np.tanh(0.184 * (sw_bz + 8.14))) * np.power(sw_pdyn, -1.0 / GEOSTAT_re)
+    shue_alpha = (0.58 - 0.007 * sw_bz) * (1 + 0.024 * np.log(sw_pdyn))
+
     return shue_r0, shue_alpha
 
 
@@ -260,11 +276,12 @@ def process_satellite(config, satellite_key):
     results = {}
     magn_data = read_nc_data(config[f'{satellite_key}_magn_file'])
     mpsl_data = read_nc_data(config[f'{satellite_key}_mpsl_file'])
-    # ic(magn_data)
+
     # Convert time array to datetime
     datetime_values = convert_to_datetime(magn_data['time'], units=TIME_UNITS)
     results['start_datetime'] = datetime_values[0]
     results['end_datetime'] = datetime_values[-1]
+
     results['datetime_values'] = datetime_values  # Storing the entire datetime array
 
     # Process magnetic field data if available
@@ -318,106 +335,32 @@ def calculate_flags(shue_r0, ion_ratios, electron_ratios, b_epn):
     return flags
 
 
-# def main(config_path):
-#     config = load_config(config_path)
-#
-#     # Attempt to process both G16 and G18 satellites
-#     g16_results = process_satellite(config, 'g16') if 'g16_magn_file' in config else None
-#     g18_results = process_satellite(config, 'g18') if 'g18_magn_file' in config else None
-#     # ic(g16_results)
-#
-#     if g16_results and g18_results:
-#         start_datetime = max(g16_results['start_datetime'], g18_results['start_datetime'])
-#         end_datetime = min(g16_results['end_datetime'], g18_results['end_datetime'])
-#     elif g16_results:
-#         start_datetime, end_datetime = g16_results['start_datetime'], g16_results['end_datetime']
-#     elif g18_results:
-#         start_datetime, end_datetime = g18_results['start_datetime'], g18_results['end_datetime']
-#     else:
-#         logger.error("No satellite data available.")
-#         return
-#
-#     # Fetch OMNI data using the determined datetime range
-#     omni_data = get_omni_values(start_datetime, end_datetime)
-#     sw_dyn_p = calculate_solar_wind_dynamic_pressure(omni_data)
-#     shue_r0, shue_alpha = run_shue(omni_data['BZ_GSM'], sw_dyn_p)
-#
-#
-#     # process satellite mag/epn data:
-#     g16_flags = calculate_flags(shue_r0, g16_results['ion_ratios'], g16_results['electron_ratios'], g16_results[
-#     'b_epn'])
-#     g18_flags = calculate_flags(shue_r0, g18_results['ion_ratios'], g18_results['electron_ratios'], g18_results[
-#     'b_epn'])
-#
-#     plot_mpause_plots(g18_results, g18_flags, omni_data, shue_r0, sw_dyn_p)
-#
-#     ic(g16_flags)
-#
-#
-#
-#
-#
-#     #
-#     # # Read data for G16
-#     # g16_magn_data = read_nc_data(config['g16_magn_file'])
-#     # g16_mpsl_data = read_nc_data(config['g16_mpsl_file'])
-#     #
-#     # if 'IonMoments' in g16_mpsl_data:
-#     #     i_density, i_t_parallel, i_t_perp = extract_moment_data(
-#     #         g16_mpsl_data['IonMoments'])
-#     #     # Ensure data is reshaped properly if not already three-dimensional
-#     #     i_moments = np.stack((i_density, i_t_parallel, i_t_perp), axis=-1).reshape(-1, 1, 3)
-#     #     i_ratios = calc_ratio(i_moments)
-#     #     # print("Ion Density to Temperature Ratios:", i_ratios)
-#     #
-#     # if 'EleMoments' in g16_mpsl_data:
-#     #     e_density, e_t_parallel, e_t_perp = extract_moment_data(
-#     #         g16_mpsl_data['EleMoments'])
-#     #     # Ensure data is reshaped properly if not already three-dimensional
-#     #     e_moments = np.stack((e_density, e_t_parallel, e_t_perp),
-#     #                          axis=-1).reshape(-1, 1, 3)
-#     #     e_ratios = calc_ratio(e_moments)
-#     #     # print("Electron Density to Temperature Ratios:", e_ratios)
-#     #
-#     # datetime_values = convert_to_datetime(g16_magn_data['time'], units=TIME_UNITS)
-#     # start_datetime, end_datetime = datetime_values[0], datetime_values[-1]
-#     # # ic(start_datetime, end_datetime)
-#     #
-#     # # # Fetch OMNI data for the range
-#     # sw_bow_data = get_omni_values(start_datetime, end_datetime)
-#     # # TODO: import prop code to prop dscovr sw variables to bow shock?
-#     # ic(sw_bow_data)
-#     #
-#     # sw_dyn_p = calculate_solar_wind_dynamic_pressure(sw_bow_data)
-#     # shue_r0, shue_alpha = run_shue(sw_bow_data['BZ_GSM'], sw_dyn_p)
-#     # ic(shue_r0, shue_alpha)
-#     #
-#     # plt.plot(sw_bow_data['Epoch'], shue_r0)
-#     # plt.show()
-#     # --------------------------------
-#     # # Process data
-#     # g16_mlt = process_data(g16_magn_data)  # Example processing
-#     #
-#     # # Process magnetic field data if available
-#     # if 'b_gsm' in g16_magn_data:
-#     #     g16_mlt = process_magnetic_data(g16_magn_data['b_gsm'])  # Modify to your actual processing function
-#     #     logger.info(f"MLT for G16 from magnetic data: {g16_mlt}")
-#     #
-#     # # Process electron moments data if available
-#     # if 'EleMoments' in g16_mpsl_data:
-#     #     ele_results = process_particle_moments(g16_mpsl_data[
-#     #                                                'EleMoments'])  # Modify to your actual processing function
-#     #     logger.info(
-#     #         f"Electron moments processed results for G16: {ele_results}")
-#     #
-#     # # Process ion moments data if available
-#     # if 'IonMoments' in g16_mpsl_data:
-#     #     ion_results = process_particle_moments(g16_mpsl_data[
-#     #                                                'IonMoments'])  # Modify to your actual processing function
-#     #     logger.info(f"Ion moments processed results for G16: {ion_results}")
-#     #
-#     # # Example of logging the results
-#     # logger.info(f"MLT for G16: {g16_mlt}")
+def rename_propagated_data_keys(propagated_data):
+    """
+    Rename keys in the propagated data dictionary to match expected OMNI data field names.
+
+    Parameters:
+        propagated_data (dict): Dictionary with keys as parameter names and values as data lists.
+
+    Returns:
+        dict: A dictionary with renamed keys.
+    """
+    # Mapping of original keys to desired OMNI-compatible keys
+    key_map = {
+        'bz_gsm': 'BZ_GSM',
+        'proton_speed': 'flow_speed',
+        'proton_density': 'proton_density',
+        'time': 'Epoch'
+    }
+
+    # Create a new dictionary with the renamed keys
+    renamed_data = {}
+    for old_key, new_key in key_map.items():
+        if old_key in propagated_data:
+            renamed_data[new_key] = propagated_data[old_key]
+
+    return renamed_data
+
 
 def main(config_path):
     config = load_config(config_path)
@@ -440,17 +383,25 @@ def main(config_path):
     start_datetime = max([dates[0] for dates in all_dates])
     end_datetime = min([dates[-1] for dates in all_dates])
 
-    # Fetch OMNI data using the determined datetime range
-    omni_data = get_omni_values(start_datetime, end_datetime)
-    sw_dyn_p = calculate_solar_wind_dynamic_pressure(omni_data)
-    shue_r0, shue_alpha = run_shue(omni_data['BZ_GSM'], sw_dyn_p)
+    if config.get('use_dscovr_propagation', False):
+        ic('Getting SW data via DSCOVR Propagation')
+        params_to_propagate = config.get('params_to_propagate')
+        propagated_data = propagate_parameters(config_path=config_path, params=params_to_propagate)
+        sw_data = rename_propagated_data_keys(propagated_data)
+    else:
+        print("Getting SW data via OMNI")
+        # Fetch OMNI data using the determined datetime range
+        sw_data = get_omni_values(start_datetime, end_datetime)
+
+    sw_dyn_p = calculate_solar_wind_dynamic_pressure(sw_data)
+    shue_r0, shue_alpha = run_shue(sw_data['BZ_GSM'], sw_dyn_p)
 
     # Calculate flags and plot results for each satellite
     for key, res in results.items():
         if res:
+            satellite_name = f"GOES-{key[1:].upper()}"  # Construct the satellite name dynamically
             flags = calculate_flags(shue_r0, res['ion_ratios'], res['electron_ratios'], res['b_epn'])
-            plot_mpause_plots(res, flags, omni_data, shue_r0, sw_dyn_p)
-            ic(flags)
+            plot_mpause_plots(res, flags, sw_data, shue_r0, sw_dyn_p, satellite_name)
 
 
 if __name__ == '__main__':

@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from pandas import to_datetime
 
 
-def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p):
+def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p, sat_name):
     fig, axs = plt.subplots(6, 1, sharex=True)
 
     # Magnetic field Hp
@@ -23,10 +25,6 @@ def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p):
     # Shue r0
     axs[2].plot(goes_results['datetime_values'], shue_r0, 'g-', label='Shue r0')
     axs[2].axhline(y=6.6, color='r', linestyle='--', label='6.6 Re')
-    # for i, flag in enumerate(g16_flags['flag_r0']):
-    #     if flag:
-    #         axs[2].axvline(x=g16_results['datetime_values'][i], color='red', linewidth=0.5)  # Plot each flag as a
-    #         line
     axs[2].set_ylabel('Shue r0')
     axs[2].legend()
 
@@ -57,14 +55,20 @@ def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p):
     axs[4].legend(loc='upper left')
 
     # Solar Wind properties combined in one plot with two y-axes
+    sw_dates = mdates.date2num(to_datetime(sw_data['Epoch']))
+
     ax4 = axs[5]
     ax5 = ax4.twinx()  # Create a twin Axes sharing the xaxis
-    ax4.plot(sw_data['Epoch'], sw_dyn_p, 'm-', label='SW Density')
-    ax5.plot(sw_data['Epoch'], sw_data['flow_speed'], 'purple', label='SW Speed')
+    ax4.plot(sw_dates, sw_dyn_p, 'm-', label='SW Density')
+    ax5.plot(sw_dates, sw_data['flow_speed'], 'purple', label='SW Speed')
     ax4.set_ylabel('SW Density [nPa]')
     ax5.set_ylabel('SW Speed [km/s]')
     ax4.legend(loc='upper left')
     ax5.legend(loc='upper right')
+
+    plt.gcf().autofmt_xdate()  # Automatically formats the x-dates to look better
+    date_format = mdates.DateFormatter('%H')
+    ax4.xaxis.set_major_formatter(date_format)
 
     # Set common labels
     for ax in axs[:-1]:
@@ -72,4 +76,6 @@ def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p):
 
     axs[-1].set_xlabel('Time [hours]')  # Only set x-label on the last subplot
     plt.tight_layout()
+    fig.suptitle(f'Magnetopause Location, {sat_name}')
+
     plt.show()
