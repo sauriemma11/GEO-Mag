@@ -1,10 +1,8 @@
 from data_loader import *
-from plotter import *
+from plotting.plotter import *
 from utils import *
 import netCDF4 as nc
 import argparse
-import pandas as pd
-from tkinter import *
 
 
 # TODO: Add gui....eventually

@@ -4,7 +4,7 @@ import matplotlib.dates as mdates
 from pandas import to_datetime
 
 
-def plot_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p, sat_name, sw_data_via):
+def make_mpause_plots(goes_results, flag_Arr, sw_data, shue_r0, sw_dyn_p, sat_name, sw_data_via):
     min_shue_r0 = np.nanmin(shue_r0)
 
     fig, axs = plt.subplots(6, 1, sharex=True)

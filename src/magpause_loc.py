@@ -3,16 +3,12 @@ import logging
 import datetime
 from netCDF4 import num2date
 import netCDF4 as nc
-from scipy import constants
-from spacepy.coordinates import Coords
-from spacepy.time import Ticktock
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from icecream import ic
 import os
 from cdasws import CdasWs
-import matplotlib.pyplot as plt
-from mploc_plotting import plot_mpause_plots
+from plotting.mploc_plotting import make_mpause_plots
 from DSCOVR_prop.dscovr_propagation import propagate_parameters
 
 if not "CDF_LIB" in os.environ:
@@ -404,8 +400,8 @@ def main(config_path):
         if res:
             satellite_name = f"GOES-{key[1:].upper()}"  # Construct the satellite name dynamically
             flags = calculate_flags(shue_r0, res['ion_ratios'], res['electron_ratios'], res['b_epn'])
-            plot_mpause_plots(res, flags, sw_data, shue_r0, sw_dyn_p, satellite_name, sw_data_via)
+            make_mpause_plots(res, flags, sw_data, shue_r0, sw_dyn_p, satellite_name, sw_data_via)
 
 
 if __name__ == '__main__':
-    main('config.JSON')
+    main('mploc_config.JSON')

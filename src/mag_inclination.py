@@ -425,7 +425,7 @@ def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
     Returns:
     None
     """
-
+    ic(date_str)
     # Define the color mapping for each spacecraft
     color_map = {
         'G17': 'red',
@@ -444,6 +444,7 @@ def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
 
     # Set unique properties and plot each spacecraft
     for idx, (component, ax) in enumerate(zip(['X', 'Y', 'Z'], axs[:-1])):
+
         for spacecraft, data in spacecraft_data_dict.items():
             ax.plot(timedataset, data[:, idx], label=spacecraft,
                     color=color_map[spacecraft], linewidth=1)
@@ -454,11 +455,18 @@ def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
 
     # Plot sym-h for 4th subplot:
     # get symh data via cdasWs omni dataset
+    ic(date_str)
+    ic(type(date_str))
     data = cdas.get_data('OMNI_HRO_1MIN', 'SYM_H', f'{date_str}T00:00:00Z',
                          f'{date_str}T23:59:00Z',
-                         dataRepresentation=dr.XARRAY)[
-        1]
-    sym_h = data.SYM_H.values
+                         dataRepresentation=dr.XARRAY)[1]
+    if data:
+        ic(data)
+        sym_h = data.SYM_H.values
+    else:
+        ic('No data')
+        sym_h = np.full(len(timedataset), np.nan)
+        ic(sym_h)
 
     # Plot the SYM-H data on the last subplot
     axs[-1].plot(timedataset, sym_h, label='SYM-H', linewidth=1)
@@ -474,26 +482,59 @@ def plot_BGSE_fromdata_ontop(timedataset, date_str, spacecraft_data_dict):
     plt.show()
 
 
+def plot_BGSE_fromdata_ontopBZONLY(timedataset, date_str, spacecraft_data_dict):
+    # Define the color mapping for each spacecraft
+    color_map = {
+        'G17': 'red',
+        'G18': 'orange',
+        'GK2A': 'blue',
+        'G16': 'green'
+    }
+
+    # Create subplots
+    fig, axs = plt.subplots(1, 1)
+
+    # # Set common plot properties
+    # axs.xaxis.set_major_formatter(mdates.DateFormatter(''))
+    # axs.tick_params(axis='x', which='both', length=6, labelbottom=False)
+    axs.axhline(y=0, color='r', linestyle='--')
+    for spacecraft, data in spacecraft_data_dict.items():
+        axs.plot(timedataset, data[:, 2], label=spacecraft,
+                 color=color_map[spacecraft], linewidth=1)
+        axs.set_ylabel(f'$B_z$ [nT]')
+        # Only show the legend on the first plot (X component)
+        axs.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    axs.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    axs.tick_params(axis='x', which='both')
+    axs.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+
+    axs.set_title(f'B field (GSE) - {date_str}')
+
+    plt.subplots_adjust(hspace=0.075, right=0.8)
+    plt.tight_layout()
+    plt.show()
+
+
 ##################################
-
 g16_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g16_d20230226_v2-0-2.nc')
-goes17coloc_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g17_d20230226_v2-0-2.nc')
-gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230226_b_gse.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g16/mag_1m/2024_05/dn_magn-l2-avg1m_g16_d20240510_v2-0-2.nc')
+gk2a_dataset = nc.Dataset('C:/Users/sarah.auriemma/Desktop/Data_new/gk2a/getsosmag/SOSMAG_20240510_b_gse.nc')
 goes18_dataset = nc.Dataset(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2023_02/dn_magn-l2'
-    '-avg1m_g18_d20230226_v2-0-2.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2024_05/dn_magn-l2-avg1m_g18_d20240510_v2-0-2.nc')
+# goes17coloc_dataset = nc.Dataset(
+#     'C:/Users/sarah.auriemma/Desktop/Data_new/g17/mag_1m/2023_02/dn_magn-l2'
+#     '-avg1m_g17_d20230226_v2-0-2.nc')
+# gk2a_dataset = nc.Dataset('Z:/Data/GK2A/SOSMAG_20230226_b_gse.nc')
 
-goes_time_fromnc = goes_epoch_to_datetime(goes17coloc_dataset['time'][:])
+
+goes_time_fromnc = goes_epoch_to_datetime(goes18_dataset['time'][:])
 
 goes18_bgse_stacked = stack_from_data(goes18_dataset['b_gse'])
 goes18_bgse_stacked = fix_nan_for_goes(goes18_bgse_stacked)
 
-goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
-goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
+# goes17_bgse_stacked = stack_from_data(goes17coloc_dataset['b_gse'])
+# goes17_bgse_stacked = fix_nan_for_goes(goes17_bgse_stacked)
 
 goes16_bgse_stacked = stack_from_data(g16_dataset['b_gse'])
 goes16_bgse_stacked = fix_nan_for_goes(goes16_bgse_stacked)
@@ -513,23 +554,27 @@ date_str = dtm.datetime.strftime(goes_time_fromnc[0], '%Y-%m-%d')
 # G16, green
 
 spacecraft_data = {
-    'G17': goes17_bgse_stacked,
+    # 'G17': goes17_bgse_stacked,
     'G16': goes16_bgse_stacked,
     'GK2A': gk2a_bgse_stacked,
     'G18': goes18_bgse_stacked
 }
-
+plot_BGSE_fromdata_ontopBZONLY(timedataset=goes_time_fromnc, date_str=date_str,
+                               spacecraft_data_dict=spacecraft_data)
 plot_BGSE_fromdata_ontop(timedataset=goes_time_fromnc, date_str=date_str,
                          spacecraft_data_dict=spacecraft_data)
 
-goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
+# goes17_VDH = gse_to_vdh(goes17_bgse_stacked, goes_time_fromnc)
 goes18_VDH = gse_to_vdh(goes18_bgse_stacked, goes_time_fromnc)
 gk2a_VDH = gse_to_vdh(gk2a_bgse_stacked, goes_time_fromnc)
 goes16_VDH = gse_to_vdh(goes16_bgse_stacked, goes_time_fromnc)
 
-VDH_Datasets = {'G17': goes17_VDH,
-                'G16': goes16_VDH,
-                'GK2A': gk2a_VDH}
+VDH_Datasets = {
+    # 'G17': goes17_VDH,
+    'G18': goes18_VDH,
+    'G16': goes16_VDH,
+    'GK2A': gk2a_VDH
+}
 
 plot_magnetic_inclination_over_time_3sc(goes_time_fromnc, date_str,
                                         VDH_Datasets)

@@ -1,10 +1,7 @@
-import matplotlib.pyplot as plt
 import utils
 import data_loader
 import pandas as pd
-import os
-import plotter
-import numpy as np
+from plotting import plotter
 
 # # Load kp data:
 # kp_data_txt_path = 'C:/Users/sarah.auriemma/Desktop/Data_new/kp_2019.txt'

@@ -94,11 +94,12 @@ def get_omni_values(timestamp):
     end_time_str = end_time.strftime('%Y%m%dT%H:%M:00Z')
 
     data = \
-    cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure'], start_time_str,
+    cdas.get_data('OMNI_HRO_1MIN', ['BZ_GSM', 'Pressure', 'Speed'], start_time_str,
                   end_time_str, dataRepresentation=dr.XARRAY)[1]
 
     bz_imf_values = data.BZ_GSM.values
     pressure_values = data.Pressure.values
+    speed_values = data.Speed.values
 
     average_pressure = np.nanmean(pressure_values)
     max_pressure = np.nanmax(pressure_values)
@@ -115,12 +116,46 @@ def get_omni_values(timestamp):
     print('Max/Min/avg of SW pressure:', max_pressure, min_pressure,
           average_pressure)
 
+    print(speed_values)
+
     # Asking the user to input the specific values they want to use
     bz_imf_input = float(input("Enter the BZ_IMF value you want to use: "))
     sw_pressure_input = float(
         input("Enter the Solar Wind Pressure value you want to use: "))
 
-    return bz_imf_input, sw_pressure_input
+    return bz_imf_input, sw_pressure_input, speed_values
+
+
+def calculate_dynamic_pressure(n, v):
+    """
+    Calculate the dynamic pressure in nanoPascals given density and velocity.
+
+    Parameters:
+    n (float): Density of particles in particles per cubic centimeter (particles/cm^3).
+    v (float): Velocity in kilometers per second (km/s).
+
+    Returns:
+    float: Dynamic pressure in nanoPascals (nPa).
+    """
+    # Constants
+    mass_per_particle = 1.6726e-27  # kg, mass of a proton
+
+    # Convert density from particles/cm^3 to particles/m^3
+    density_m3 = n * 1e6  # particles/m^3
+
+    # Convert velocity from km/s to m/s
+    velocity_m = v * 1000  # m/s
+
+    # Calculate mass density (rho = mass per particle * number of particles per m^3)
+    mass_density = mass_per_particle * density_m3  # kg/m^3
+
+    # Calculate dynamic pressure (p = rho * v^2)
+    dynamic_pressure_pa = mass_density * velocity_m ** 2  # Pascals (Pa)
+
+    # Convert from Pascals to nanoPascals
+    dynamic_pressure_npa = dynamic_pressure_pa * 1e9  # nPa
+
+    return dynamic_pressure_npa
 
 
 def load_sosmag_positional_data(timestamp_str):
@@ -493,12 +528,19 @@ def main():
     transformed_dict = transform_spacecraft_data(satellites_data)
     ic(transformed_dict)
 
-    imf_bz, solar_wind_pressure = get_omni_values(timestamp_for_OMNI_and_title)
+    # imf_bz, solar_wind_pressure = get_omni_values(timestamp_for_OMNI_and_title)
 
-    # imf_bz, solar_wind_pressure = -13.75, 6.86
+    # For real time SW (less than 7 days ago): https://www.swpc.noaa.gov/products/real-time-solar-wind
+    # Get TEMP, DENSITY, SPEED, BZ IMF
+    # Pressure = nkT+(1/2)pv^2
+
+    # n = 19.93  # particles per cm^3
+    # v = 694  # km/s
+    # imf_bz, solar_wind_pressure = -45.5, calculate_dynamic_pressure(n, v)
+
     plot_spacecraft_positions_with_earth_and_magnetopause(transformed_dict,
-                                                          solar_wind_pressure,
-                                                          imf_bz,
+                                                          23.63,
+                                                          -10.21,
                                                           timestamp_for_OMNI_and_title)
 
 
