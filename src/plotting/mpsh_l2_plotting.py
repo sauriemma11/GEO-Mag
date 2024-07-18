@@ -36,13 +36,13 @@ RECORDS_PER_FILE = 1440  # Change this depending on timestamps?
 # filenamelist.append('C:/Users/sarah.auriemma/Desktop/Data_new/g16/pd
 # /sci_mpsh-l2-avg1m_g16_d20190514_v1-0-2.nc')
 filenamelist.append(
-    'C:/Users/sarah.auriemma/Desktop/Data_new/g17/pd/sci_mpsh-l2'
-    '-avg1m_g17_d20220815_v2-0-0.nc')
+    'C:/Users/sarah.auriemma/Desktop/Data_new/g18/pd/sci_mpsh-l2-avg1m_g18_d20240510_v2-0-2.nc')
 
 num_input_files = len(filenamelist)
 parts = filenamelist[0].split('/')
 spacecraft_name = parts[-3].upper()
 ic(spacecraft_name)
+spacecraft_name = 'G18'
 
 
 def mkticks(first_j2000_sec, num_input_files, extra_hours=0):
@@ -106,8 +106,8 @@ variable_data = {var_name: [] for var_name in variable_names_arr}
 
 for file in filenamelist:
     nc_file = NCDataset(file, 'r')
-    # ic(nc_file.variables.keys())
-    # ic(nc_file['EleMoments'])
+    ic(nc_file.variables.keys())
+    ic(nc_file['AvgDiffProtonFlux'])
 
     for var_name in variable_names_arr:
         if var_name in nc_file.variables:

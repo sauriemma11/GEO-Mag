@@ -10,8 +10,7 @@ from matplotlib import gridspec
 from datetime import datetime, timedelta
 from utils import format_units, mkticks
 
-datafile = 'C:/Users/sarah.auriemma/Desktop/Data_new/gk2a/pd' \
-           '/gk2a_ksem_pd_e_1m_le1_20220815.nc'
+datafile = 'C:/Users/sarah.auriemma/Desktop/Data_new/gk2a/pd/gk2a_ksem_pd_e_1m_le1_20240510.nc'
 # datafile = 'C:/Users/sarah.auriemma/Desktop/Data_new/gk2a
 # /Sarah_KSEM_electron/gk2a_ksem_pd_e_1m_le1_20230226.nc'
 
