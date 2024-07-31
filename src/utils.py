@@ -4,6 +4,88 @@ from typing import List, Tuple
 import pandas as pd
 import re
 import utils as tsu
+import requests
+from bs4 import BeautifulSoup
+import os
+import gzip
+import shutil
+import time
+
+
+def download_and_extract_dscovr_data(instr, start_date, end_date, base_download_dir):
+    """
+    Download and extract DSCOVR data files from specified start date to end date.
+
+    Args:
+    instr (str): Instrument code ('f1m', 'm1m', 'pop')
+    start_date (str): Start date in 'YYYY-MM-DD' format.
+    end_date (str): End date in 'YYYY-MM-DD' format.
+    base_download_dir (str): Base directory to store downloaded and extracted data.
+    """
+    start = dt.datetime.strptime(start_date, '%Y-%m-%d')
+    end = dt.datetime.strptime(end_date, '%Y-%m-%d')
+    current = start
+
+    while current <= end:
+        year = current.year
+        month = current.month
+        download_dir = os.path.join(base_download_dir, f"{year}/{month:02}/")
+        os.makedirs(download_dir, exist_ok=True)
+
+        base_url = f"https://www.ngdc.noaa.gov/dscovr/data/{year}/{month:02}/"
+        response = requests.get(base_url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        links = soup.find_all('a')
+        starts_with_str = f'oe_{instr}'
+
+        for link in links:
+            if link.get('href').startswith(starts_with_str) and link.get('href').endswith('.nc.gz'):
+                gz_file_url = base_url + link.get('href')
+                gz_file_path = os.path.join(download_dir, link.get('href'))
+                nc_file_path = os.path.splitext(gz_file_path)[0]  # Remove .gz to get the .nc path
+
+                if os.path.exists(nc_file_path):
+                    print(f"{nc_file_path} already exists, skipping download and extraction")
+                    continue
+
+                if not os.path.exists(gz_file_path):
+                    try:
+                        print(f"Downloading {gz_file_url}...")
+                        response = requests.get(gz_file_url)
+                        with open(gz_file_path, 'wb') as f:
+                            f.write(response.content)
+                    except requests.exceptions.ConnectionError:
+                        print(f"Connection error while downloading {gz_file_url}, retrying in 5 seconds...")
+                        time.sleep(5)
+                        response = requests.get(gz_file_url)
+                        with open(gz_file_path, 'wb') as f:
+                            print(f"Retrying download of {gz_file_url}...")
+                            f.write(response.content)
+
+                # Extract the gz file
+                extract_gz_file(gz_file_path, nc_file_path)
+
+        current = dt.datetime(year, month + 1, 1)  # Move to the next month
+
+    print("Download and extraction complete for the specified range.")
+
+
+def extract_gz_file(gz_path, output_path):
+    """
+    Extracts a .gz file to a .nc file.
+
+    Args:
+    gz_path (str): Path to the .gz file.
+    output_path (str): Path to output the extracted .nc file.
+    """
+    import gzip
+    import shutil
+    print(f"Extracting {gz_path} to {output_path}...")
+    with gzip.open(gz_path, 'rb') as f_in:
+        with open(output_path, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove(gz_path)
+    print(f"Extracted and deleted {gz_path}")
 
 
 def calculate_time_difference(longitude_degrees, hemisphere='W'):
@@ -500,14 +582,6 @@ def fix_data_error_with_nan(data, index):
     # Set the erroneous point to NaN
     data[index] = np.nan
     return data
-
-
-# Example usage:
-# outliers = find_data_errors(goes16_data[:, 2])
-# print("Outlier indices:", outliers)
-
-
-# Below are timestamp utils from Brian Kress:
 
 def timestamp_constants():
     """

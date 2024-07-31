@@ -381,8 +381,7 @@ def main(config_path):
 
     if config.get('use_dscovr_propagation', False):
         ic('Getting SW data via DSCOVR Propagation')
-        params_to_propagate = config.get('params_to_propagate')
-        propagated_data = propagate_parameters(config_path=config_path, params=params_to_propagate)
+        propagated_data = propagate_parameters(config_path=config_path)
         sw_data = rename_propagated_data_keys(propagated_data)
         sw_data_via = 'DSCOVR'
     else:

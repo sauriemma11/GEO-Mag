@@ -4,14 +4,16 @@
   "g18_magn_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g18/mag_1m/2024_05/dn_magn-l2-avg1m_g18_d20240510_v2-0-2.nc",
   "g18_mpsl_file": "C:/Users/sarah.auriemma/Desktop/Data_new/g18/pd/dn_mpsl-l2-mom1m_g18_d20240510_v1-0-2.nc",
   "use_dscovr_propagation": true,
-  "params_to_propagate": [
-    "bz_gsm",
-    "proton_speed",
-    "proton_density"
-  ],
-  "mag_file": "Z:/Data/DSCOVR/2024/05/oe_m1m_dscovr_s20240510000000_e20240510235959_p20240511034031_pub.nc",
-  "sw_file": "Z:/Data/DSCOVR/2024/05/oe_f1m_dscovr_s20240510000000_e20240510235959_p20240511034609_pub.nc",
-  "pos_file": "Z:/Data/DSCOVR/2024/05/oe_pop_dscovr_s20240510000000_e20240510235959_p20240511034641_pub.nc"
+  "spacecraft": "DSCOVR",
+  "time_range": {
+    "start": "2022-02-01T00:00:00Z",
+    "end": "2022-02-01T23:59:59Z"
+  },
+  "files": {
+    "mag_file": "Z:/Data/DSCOVR/2024/05/oe_m1m_dscovr_s20240510000000_e20240510235959_p20240511034031_pub.nc",
+    "sw_file": "Z:/Data/DSCOVR/2024/05/oe_f1m_dscovr_s20240510000000_e20240510235959_p20240511034609_pub.nc",
+    "pos_file": "Z:/Data/DSCOVR/2024/05/oe_pop_dscovr_s20240510000000_e20240510235959_p20240511034641_pub.nc"
+  }
 }
 
 
