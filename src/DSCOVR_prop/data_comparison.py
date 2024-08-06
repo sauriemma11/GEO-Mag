@@ -134,8 +134,11 @@ def propagate_data_over_period(start_date, end_date, base_config_path):
 
         daily_result = propagate_parameters(daily_config_path)
 
-        if 'time' not in daily_result:
-            daily_result['time'] = [current_date + dt.timedelta(minutes=i) for i in range(len(daily_result['bx_gse']))]
+        if 'time' in daily_result:
+            daily_result['DateTime'] = pd.to_datetime(daily_result.pop('time'))
+        else:
+            daily_result['DateTime'] = [current_date + dt.timedelta(minutes=i) for i in
+                                        range(len(daily_result['bx_gse']))]
 
         all_results.append(daily_result)
 
@@ -160,29 +163,48 @@ def round_and_aggregate(data, round_to='min'):
     return df
 
 
+def find_closest_timestamps(omni_times, prop_times):
+    omni_times_seconds = omni_times.astype('datetime64[s]').astype(np.int64)
+    prop_times_seconds = prop_times.astype('datetime64[s]').astype(np.int64)
+
+    closest_indices = np.searchsorted(omni_times_seconds, prop_times_seconds)
+    closest_indices = np.clip(closest_indices, 1, len(omni_times_seconds) - 1)
+    prev_indices = closest_indices - 1
+
+    closest_times = omni_times_seconds[closest_indices]
+    prev_times = omni_times_seconds[prev_indices]
+
+    closer = np.where((prop_times_seconds - prev_times) < (closest_times - prop_times_seconds), prev_indices,
+                      closest_indices)
+    return closer
+
+
+# merge datasets on nearest timestamp
+
 def compare_omni_and_propagated(omni_data, propagated_data):
-    if 'DateTime' not in omni_data.columns:
-        omni_data = omni_data.reset_index()
-
+    # Ensure the DateTime column is present and correctly formatted
     if 'DateTime' not in propagated_data.columns:
-        propagated_data = propagated_data.reset_index()
+        raise KeyError("The propagated data does not contain 'DateTime' column.")
 
-    # TODO: trim omni data by day first before comparing
+        # Remove duplicate timestamps
+    omni_data = omni_data.drop_duplicates(subset='DateTime')
+    propagated_data = propagated_data.drop_duplicates(subset='DateTime')
 
-    start_time = propagated_data['DateTime'].min()
-    end_time = propagated_data['DateTime'].max()
+    # Align the timestamps by using the intersection of the indices
+    common_times = omni_data.index.intersection(propagated_data.index)
+    omni_data_aligned = omni_data.loc[common_times]
+    propagated_data_aligned = propagated_data.loc[common_times]
 
-    omni_data_trimmed = omni_data[(omni_data['DateTime'] >= start_time) & (omni_data['DateTime'] <= end_time)]
-
-    # Merge on DateTime
-    merged_df = pd.merge(omni_data_trimmed, propagated_data, on='DateTime', suffixes=('_omni', '_prop'))
+    # Merge data on DateTime index
+    merged_df = pd.concat([omni_data_aligned, propagated_data_aligned], axis=1, keys=['omni', 'prop'])
 
     # Calculate differences
     differences = {}
     for column in ['bx_gse', 'by_gse', 'bz_gse', 'by_gsm', 'bz_gsm', 'proton_speed', 'proton_density', 'proton_vx_gsm']:
-        differences[column] = merged_df[f'{column}_omni'] - merged_df[f'{column}_prop']
+        differences[column] = merged_df['omni'][column] - merged_df['prop'][column]
 
     return differences
+
 
 
 def calculate_statistics(differences):
@@ -233,8 +255,8 @@ def plot_differences(differences):
 
 def calculate_covariance(omni_data, propagated_data):
     """Calculate covariance between OMNI and propagated data."""
-    omni_data.set_index('DateTime', inplace=True)
-    propagated_data.set_index('DateTime', inplace=True)
+    omni_data = omni_data.drop_duplicates(subset='DateTime').set_index('DateTime')
+    propagated_data = propagated_data.drop_duplicates(subset='DateTime').set_index('DateTime')
 
     covariance_matrices = {}
     for column in ['bx_gse', 'by_gse', 'bz_gse', 'by_gsm', 'bz_gsm', 'proton_speed', 'proton_density', 'proton_vx_gsm']:
@@ -289,6 +311,17 @@ def plot_time_series(omni_data, propagated_data):
         plt.show()
 
 
+def trim_omni_data(omni_data, propagated_data):
+    # Find the min and max DateTime in the propagated data
+    min_time = propagated_data['DateTime'].min()
+    max_time = propagated_data['DateTime'].max()
+
+    # Filter the omni_data to include only the rows within the min and max DateTime range
+    trimmed_omni_data = omni_data[(omni_data['DateTime'] >= min_time) & (omni_data['DateTime'] <= max_time)]
+
+    return trimmed_omni_data
+
+
 if __name__ == '__main__':
     # file_path = '../../data/ascii.lst.txt'
     hdf5_path = '../../data/processed_data.h5'
@@ -311,21 +344,21 @@ if __name__ == '__main__':
 
     # Propagate data over the defined period
     prop_results = propagate_data_over_period(start_date, end_date, base_config_path)
+    propagated_data = pd.concat([pd.DataFrame(r) for r in prop_results])
 
-    for day_result in prop_results:
-        rounded_data = round_and_aggregate(day_result)
+    omni_data = trim_omni_data(omni_data, propagated_data)
 
-        differences = compare_omni_and_propagated(omni_data, rounded_data)
+    ic(propagated_data)
+    ic(omni_data)
 
-        for key in all_differences.keys():
-            all_differences[key].extend(differences[key])
+    differences = compare_omni_and_propagated(omni_data, propagated_data)
+    ic(differences)
 
-    statz = calculate_statistics(all_differences)
-    cov_matrix = calculate_covariance(omni_data, rounded_data)
-    # plot_covariance(cov_matrix)
-    # plot_differences(all_differences)
-    ic(len(omni_data), len(rounded_data))
+    stats = calculate_statistics(differences)
+    ic(stats)
 
-    # plot_time_series(omni_data, rounded_data)
+    cov_matrix = calculate_covariance(omni_data, propagated_data)
 
-    ic(omni_data, rounded_data)
+    plot_covariance(cov_matrix)
+    plot_differences(differences)
+    plot_time_series(omni_data, propagated_data)

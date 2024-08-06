@@ -140,4 +140,3 @@ def propagate_parameters(config_path=None):
 
 if __name__ == '__main__':
     propagated_data = propagate_parameters('../mploc_config.JSON')
-    ic(propagated_data['time'])
